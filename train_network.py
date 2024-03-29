@@ -862,10 +862,10 @@ class NetworkTrainer:
                         else:
                             target = noise
 
-                    loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
-                    if args.masked_loss:
-                        loss = apply_masked_loss(loss, batch)
-                    loss = loss.mean([1, 2, 3])
+                        loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
+                        if args.masked_loss:
+                            loss = apply_masked_loss(loss, batch)
+                        loss = loss.mean([1, 2, 3])
 
                         loss_weights = batch["loss_weights"]  # 各sampleごとのweight
                         loss = loss * loss_weights
