@@ -162,6 +162,7 @@ class ImageInfo:
         self.grouping = image_key
         self.scanCaptionForScaleParameter()
         self.scanCaptionForGroupParameter()
+        self.scanCaptionForExtradataParameter()
 
     def scanCaptionForScaleParameter(self):
         scaleRegularExpression = re.compile("--scale\\(\\s*([+-]?\\s*\\d+(?:\\.\\d+)?)\\s*\\)")
@@ -170,13 +171,20 @@ class ImageInfo:
             self.network_scale = float(match.group(1))
             self.caption = re.sub(scaleRegularExpression, "", self.caption)
 
+    def scanCaptionForExtradataParameter(self):
+        extraRegularExpression = re.compile("--extra\\(\\s*([+-]?\\s*\\d+(?:\\.\\d+)?)\\s*\\)")
+        match = re.search(extraRegularExpression, self.caption)
+        if match:
+            self.grouping = str(match.group(1))
+            self.caption = re.sub(extraRegularExpression, "", self.caption)
+
+
     def scanCaptionForGroupParameter(self):
         groupRegularExpression = re.compile("--group\\(\\s*([+-]?\\s*\\d+(?:\\.\\d+)?)\\s*\\)")
         match = re.search(groupRegularExpression, self.caption)
         if match:
             self.grouping = str(match.group(1))
             self.caption = re.sub(groupRegularExpression, "", self.caption)
-
 
 
 class BucketManager:
