@@ -157,6 +157,26 @@ class ImageInfo:
         self.text_encoder_outputs1: Optional[torch.Tensor] = None
         self.text_encoder_outputs2: Optional[torch.Tensor] = None
         self.text_encoder_pool2: Optional[torch.Tensor] = None
+        # Image Slider, optional
+        self.network_scale = 1
+        self.grouping = image_key
+        self.scanCaptionForScaleParameter()
+        self.scanCaptionForGroupParameter()
+
+    def scanCaptionForScaleParameter(self):
+        scaleRegularExpression = re.compile("--scale\\(\\s*([+-]?\\s*\\d+(?:\\.\\d+)?)\\s*\\)")
+        match = re.search(scaleRegularExpression, self.caption)
+        if match:
+            self.network_scale = float(match.group(1))
+            self.caption = re.sub(scaleRegularExpression, "", self.caption)
+
+    def scanCaptionForGroupParameter(self):
+        groupRegularExpression = re.compile("--group\\(\\s*([+-]?\\s*\\d+(?:\\.\\d+)?)\\s*\\)")
+        match = re.search(groupRegularExpression, self.caption)
+        if match:
+            self.grouping = str(match.group(1))
+            self.caption = re.sub(groupRegularExpression, "", self.caption)
+
 
 
 class BucketManager:
@@ -420,7 +440,7 @@ class DreamBoothSubset(BaseSubset):
         caption_prefix,
         caption_suffix,
         token_warmup_min,
-        token_warmup_step,
+        token_warmup_step
     ) -> None:
         assert image_dir is not None, "image_dir must be specified / image_dirは指定が必須です"
 
@@ -447,6 +467,7 @@ class DreamBoothSubset(BaseSubset):
         self.is_reg = is_reg
         self.class_tokens = class_tokens
         self.caption_extension = caption_extension
+
         if self.caption_extension and not self.caption_extension.startswith("."):
             self.caption_extension = "." + self.caption_extension
 
@@ -1116,9 +1137,17 @@ class BaseDataset(torch.utils.data.Dataset):
         text_encoder_outputs1_list = []
         text_encoder_outputs2_list = []
         text_encoder_pool2_list = []
+        # per-sample network weights
+        network_scale = []
+        grouping = []
 
         for image_key in bucket[image_index : image_index + bucket_batch_size]:
             image_info = self.image_data[image_key]
+
+
+            network_scale.append(image_info.network_scale)
+            grouping.append(image_info.grouping)
+
             subset = self.image_to_subset[image_key]
             loss_weights.append(
                 self.prior_loss_weight if image_info.is_reg else 1.0
@@ -1288,8 +1317,8 @@ class BaseDataset(torch.utils.data.Dataset):
         example["target_sizes_hw"] = torch.stack([torch.LongTensor(x) for x in target_sizes_hw])
         example["flippeds"] = flippeds
 
-        example["network_multipliers"] = torch.FloatTensor([self.network_multiplier] * len(captions))
-
+        example["network_multipliers"] = torch.FloatTensor(network_scale)#torch.FloatTensor([self.network_multiplier] * len(captions))
+        example["grouping"] = grouping
         if self.debug_dataset:
             example["image_keys"] = bucket[image_index : image_index + self.batch_size]
         return example
@@ -1304,6 +1333,8 @@ class BaseDataset(torch.utils.data.Dataset):
         bucket_reso = None
         flip_aug = None
         random_crop = None
+        network_multipliers = []
+        grouping = []
 
         for image_key in bucket[image_index : image_index + bucket_batch_size]:
             image_info = self.image_data[image_key]
@@ -1338,6 +1369,9 @@ class BaseDataset(torch.utils.data.Dataset):
             input_ids2_list.append(input_ids2)
             absolute_paths.append(image_info.absolute_path)
             resized_sizes.append(image_info.resized_size)
+            network_multipliers.append(image_info.network_multiplier)
+            grouping.append(image_info.grouping)
+
 
         example = {}
 
@@ -1353,6 +1387,8 @@ class BaseDataset(torch.utils.data.Dataset):
         example["flip_aug"] = flip_aug
         example["random_crop"] = random_crop
         example["bucket_reso"] = bucket_reso
+        example["network_multipliers"] = image_info.network_multiplier
+        example["grouping"] = image_info.grouping
         return example
 
 
@@ -2076,7 +2112,8 @@ def debug_dataset(train_dataset, show_input_ids=False):
                 )
                 if "network_multipliers" in example:
                     print(f"network multiplier: {example['network_multipliers'][j]}")
-
+                if "grouping" in example:
+                    print(f"Grouping: {example['grouping'][j]}")
                 if show_input_ids:
                     logger.info(f"input ids: {iid}")
                     if "input_ids2" in example:
