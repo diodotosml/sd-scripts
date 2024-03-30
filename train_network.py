@@ -860,7 +860,7 @@ class NetworkTrainer:
                             # v-parameterization training
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
                         else:
-                            target = noise
+                            target = noisy_latents - noise
 
                         loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
                         if args.masked_loss:

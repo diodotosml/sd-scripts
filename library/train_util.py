@@ -4934,7 +4934,8 @@ def get_my_scheduler(
 
     if v_parameterization:
         sched_init_args["prediction_type"] = "v_prediction"
-
+    sched_init_args["prediction_type"] = "sample"
+    scheduler_cls = DDIMScheduler
     scheduler = scheduler_cls(
         num_train_timesteps=SCHEDULER_TIMESTEPS,
         beta_start=SCHEDULER_LINEAR_START,
