@@ -2885,6 +2885,12 @@ def add_sd_models_arguments(parser: argparse.ArgumentParser):
         "--v_parameterization", action="store_true", help="enable v-parameterization training / v-parameterization学習を有効にする"
     )
     parser.add_argument(
+        "--x0_prediction",
+        action="store_true",
+        default=None,
+        help="",
+    )
+    parser.add_argument(
         "--pretrained_model_name_or_path",
         type=str,
         default=None,
