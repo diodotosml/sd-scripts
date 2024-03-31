@@ -121,6 +121,10 @@ class NetworkTrainer:
         input_ids = batch["input_ids"].to(accelerator.device)
         encoder_hidden_states = train_util.get_hidden_states(args, input_ids, tokenizers[0], text_encoders[0], weight_dtype)
         return encoder_hidden_states
+    def get_text_cond_bonus(self, args, accelerator, batch, tokenizers, text_encoders, weight_dtype, _input_ids):
+        input_ids = _input_ids.to(accelerator.device)
+        encoder_hidden_states = train_util.get_hidden_states(args, input_ids, tokenizers[0], text_encoders[0], weight_dtype)
+        return encoder_hidden_states
 
     def call_unet(self, args, accelerator, unet, noisy_latents, timesteps, text_conds, batch, weight_dtype):
         noise_pred = unet(noisy_latents, timesteps, text_conds).sample
@@ -834,12 +838,18 @@ class NetworkTrainer:
                                     args, accelerator, batch, tokenizers, text_encoders, weight_dtype
                                 )
 
-
                                 if usingExtraCaptionRegLoss:
                                     extra = {}
                                     captions = batch["extra"][0]
-                                    extra_input_ids = tokenizer[0](captions, padding=True, truncation=True,return_tensors="pt").input_ids
-                                    extra_text_encoder_conds = train_util.get_hidden_states(args, extra_input_ids, tokenizers[0], text_encoders[0],accelerator.device)
+                                    extra["input_ids"] = tokenizer[0](captions, padding=True, truncation=True,return_tensors="pt").input_ids
+
+                                    if len(tokenizers) > 1:
+                                        extra["input_ids2"] = tokenizer[1](captions, padding=True, truncation=True, return_tensors="pt").input_ids
+                                    else:
+                                        extra["input_ids2"] = None
+
+                                    extra_text_encoder_conds = self.get_text_cond_bonus(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
+                                        #train_util.get_hidden_states(args, extra_input_ids, tokenizers, text_encoders, weight_dtype)
 
 
                         # Sample noise, sample a random timestep for each image, and add noise to the latents,
