@@ -121,8 +121,8 @@ class NetworkTrainer:
         input_ids = batch["input_ids"].to(accelerator.device)
         encoder_hidden_states = train_util.get_hidden_states(args, input_ids, tokenizers[0], text_encoders[0], weight_dtype)
         return encoder_hidden_states
-    def get_text_cond_bonus(self, args, accelerator, batch, tokenizers, text_encoders, weight_dtype, _input_ids):
-        input_ids = _input_ids.to(accelerator.device)
+    def get_text_cond_bonus(self, args, accelerator, batch, tokenizers, text_encoders, weight_dtype):
+        input_ids = batch["input_ids"].to(accelerator.device)
         encoder_hidden_states = train_util.get_hidden_states(args, input_ids, tokenizers[0], text_encoders[0], weight_dtype)
         return encoder_hidden_states
 
