@@ -837,18 +837,17 @@ class NetworkTrainer:
 
                                 if usingExtraCaptionRegLoss:
                                     extra = []
-                                    captions = [batch["extra"],batch["extra"]]
+                                    captions = batch["extra"][0]
+
                                     extra_input_ids = tokenizer[0](captions, padding=True, truncation=True,return_tensors="pt").input_ids
                                     if len(tokenizers) > 1:
                                         extra_input_ids_2 = tokenizer[1](captions, padding=True, truncation=True, return_tensors="pt").input_ids
                                     else:
                                         extra_input_ids_2 = None
-                                    breakpoint()
+
                                     extra["extra_input_ids"] = extra_input_ids
                                     extra["extra_input_ids_2"] = extra_input_ids_2
-                                    extra_text_encoder_conds = self.get_text_cond(
-                                        args, accelerator, extra, tokenizers, text_encoders, weight_dtype
-                                    )
+                                    extra_text_encoder_conds = self.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
 
 
                         # Sample noise, sample a random timestep for each image, and add noise to the latents,
