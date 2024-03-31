@@ -845,8 +845,8 @@ class NetworkTrainer:
                                     else:
                                         extra_input_ids_2 = None
 
-                                    extra["extra_input_ids"] = extra_input_ids
-                                    extra["extra_input_ids_2"] = extra_input_ids_2
+                                    extra["extra_input_ids"] = [extra_input_ids]
+                                    extra["extra_input_ids_2"] = [extra_input_ids_2]
                                     extra_text_encoder_conds = self.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
 
 
