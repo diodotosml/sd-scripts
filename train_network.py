@@ -834,9 +834,7 @@ class NetworkTrainer:
                                 )
                             else:
 
-                                text_encoder_conds = self.get_text_cond(
-                                    args, accelerator, batch, tokenizers, text_encoders, weight_dtype
-                                )
+                                text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
 
                                 if usingExtraCaptionRegLoss:
                                     extra = {}
@@ -847,7 +845,7 @@ class NetworkTrainer:
                                         extra["input_ids2"] = tokenizer[1](captions, padding=True, truncation=True, return_tensors="pt").input_ids
                                     else:
                                         extra["input_ids2"] = None
-
+                                    breakpoint()
                                     extra_text_encoder_conds = self.get_text_cond_bonus(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
                                         #train_util.get_hidden_states(args, extra_input_ids, tokenizers, text_encoders, weight_dtype)
 
