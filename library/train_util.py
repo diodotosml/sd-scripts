@@ -5090,6 +5090,7 @@ def sample_images_common(
     default_scheduler = get_my_scheduler(
         sample_sampler=args.sample_sampler,
         v_parameterization=args.v_parameterization,
+        x0_prediction=args.x0_prediction
     )
 
     pipeline = pipe_class(
