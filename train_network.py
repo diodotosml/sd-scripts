@@ -802,6 +802,10 @@ class NetworkTrainer:
                                     accelerator.print("NaN found in latents, replacing with zeros")
                                     latents = torch.nan_to_num(latents, 0, out=latents)
                         latents = latents * self.vae_scale_factor
+
+                        usingExtraCaptionRegLoss = extra in batch and not batch["extra"] == ""
+                        logger.info("usingExtraCaptionRegLoss:")
+                        logger.info(usingExtraCaptionRegLoss)
                         # get multiplier for each sample
                         if network_has_multiplier:
                             multipliers = batch["network_multipliers"]
@@ -825,9 +829,26 @@ class NetworkTrainer:
                                     clip_skip=args.clip_skip,
                                 )
                             else:
+
                                 text_encoder_conds = self.get_text_cond(
                                     args, accelerator, batch, tokenizers, text_encoders, weight_dtype
                                 )
+
+
+                                if usingExtraCaptionRegLoss:
+                                    extra = []
+                                    extra["input_ids"] = self.tokenizer[0](batch["extra"], padding=True, truncation=True,
+                                                                           return_tensors="pt").input_ids
+                                    if len(self.tokenizers) > 1:
+                                        extra["input_ids2"] = self.tokenizer[1](
+                                            batch["extra"], padding=True, truncation=True, return_tensors="pt"
+                                        ).input_ids
+                                    else:
+                                        extra["input_ids2"] = None
+                                    extra_text_encoder_conds = self.get_text_cond(
+                                        args, accelerator, extra, tokenizers, text_encoders, weight_dtype
+                                    )
+
 
                         # Sample noise, sample a random timestep for each image, and add noise to the latents,
                         # with noise offset and/or multires noise if specified
@@ -854,6 +875,17 @@ class NetworkTrainer:
                                 batch,
                                 weight_dtype,
                             )
+                            if usingExtraCaptionRegLoss:
+                                reg_noise_pred = self.call_unet(
+                                    args,
+                                    accelerator,
+                                    unet,
+                                    noisy_latents.requires_grad_(train_unet),
+                                    timesteps,
+                                    extra_text_encoder_conds,
+                                    batch,
+                                    weight_dtype,
+                                )
 
                         if args.v_parameterization:
                             # v-parameterization training
@@ -862,12 +894,17 @@ class NetworkTrainer:
                             target = noise
 
                         loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
+
                         if args.masked_loss:
                             loss = apply_masked_loss(loss, batch)
                         loss = loss.mean([1, 2, 3])
 
                         loss_weights = batch["loss_weights"]  # 各sampleごとのweight
                         loss = loss * loss_weights
+
+                        if usingExtraCaptionRegLoss:
+                            extra_loss = torch.nn.functional.mse_loss(reg_noise_pred.float(), target.float(),reduction="none")
+                            loss = loss * 2 - extra_loss
 
                         if args.min_snr_gamma:
                             loss = apply_snr_weight(loss, timesteps, noise_scheduler, args.min_snr_gamma, args.v_parameterization)
