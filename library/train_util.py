@@ -163,9 +163,11 @@ class ImageInfo:
         self.network_scale = 1
         self.extra = ""
         self.grouping = image_key
+        self.caption_reg: str = ""
         self.scanCaptionForScaleParameter()
         self.scanCaptionForGroupParameter()
         self.scanCaptionForExtradataParameter()
+        self.scanCaptionForRegCaptionParameter()
 
     def scanCaptionForScaleParameter(self):
         scaleRegularExpression = re.compile("--scale\\(\\s*([+-]?\\s*\\d+(?:\\.\\d+)?)\\s*\\)")
@@ -180,7 +182,12 @@ class ImageInfo:
         if match:
             self.extra = str(match.group(1))
             self.caption = re.sub(extraRegularExpression, "", self.caption)
-
+    def scanCaptionForRegCaptionParameter(self):
+        extraRegularExpression = re.compile("--reg\((.+?)\)")
+        match = re.search(extraRegularExpression, self.caption)
+        if match:
+            self.caption_reg = str(match.group(1))
+            self.caption = re.sub(extraRegularExpression, "", self.caption)
 
     def scanCaptionForGroupParameter(self):
         groupRegularExpression = re.compile("--group\\(\\s*([+-]?\\s*\\d+(?:\\.\\d+)?)\\s*\\)")
@@ -1193,6 +1200,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
         loss_weights = []
         captions = []
+        captions_reg = []
         input_ids_list = []
         input_ids2_list = []
         latents_list = []
@@ -1216,7 +1224,7 @@ class BaseDataset(torch.utils.data.Dataset):
             network_scale.append(image_info.network_scale)
             grouping.append(image_info.grouping)
             extra.append(image_info.extra)
-
+            captions_reg.append(image_info.caption_reg)
             subset = self.image_to_subset[image_key]
             loss_weights.append(
                 self.prior_loss_weight if image_info.is_reg else 1.0
@@ -1302,6 +1310,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
             # captionとtext encoder outputを処理する
             caption = image_info.caption  # default
+            caption_reg = image_info.caption_reg  # default
             if image_info.text_encoder_outputs1 is not None:
                 text_encoder_outputs1_list.append(image_info.text_encoder_outputs1)
                 text_encoder_outputs2_list.append(image_info.text_encoder_outputs2)
@@ -1380,6 +1389,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
         example["latents"] = torch.stack(latents_list) if latents_list[0] is not None else None
         example["captions"] = captions
+        example["captions"] = captions_reg
 
         example["original_sizes_hw"] = torch.stack([torch.LongTensor(x) for x in original_sizes_hw])
         example["crop_top_lefts"] = torch.stack([torch.LongTensor(x) for x in crop_top_lefts])
@@ -1389,6 +1399,7 @@ class BaseDataset(torch.utils.data.Dataset):
         example["network_multipliers"] = torch.FloatTensor(network_scale)#torch.FloatTensor([self.network_multiplier] * len(captions))
         example["grouping"] = grouping
         example["extra"] = extra
+        example["captions_reg"] = captions_reg
         if self.debug_dataset:
             example["image_keys"] = bucket[image_index : image_index + self.batch_size]
         return example
@@ -1406,6 +1417,7 @@ class BaseDataset(torch.utils.data.Dataset):
         network_multipliers = []
         grouping = []
         extra = []
+        captions_reg = []
 
         for image_key in bucket[image_index : image_index + bucket_batch_size]:
             image_info = self.image_data[image_key]
@@ -1443,6 +1455,7 @@ class BaseDataset(torch.utils.data.Dataset):
             network_multipliers.append(image_info.network_multiplier)
             grouping.append(image_info.grouping)
             extra.append(image_info.extra)
+            captions_reg.append(image_info.caption_reg)
 
 
         example = {}
@@ -1462,6 +1475,7 @@ class BaseDataset(torch.utils.data.Dataset):
         example["network_multipliers"] = image_info.network_multiplier
         example["grouping"] = image_info.grouping
         example["extra"] = image_info.extra
+        example["captions_reg"] = image_info.caption_reg
         return example
 
 
@@ -2245,6 +2259,7 @@ def debug_dataset(train_dataset, show_input_ids=False):
                 zip(
                     example["image_keys"],
                     example["captions"],
+                    example["captions_reg"],
                     example["loss_weights"],
                     example["input_ids"],
                     example["original_sizes_hw"],

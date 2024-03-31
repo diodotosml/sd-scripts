@@ -838,16 +838,19 @@ class NetworkTrainer:
 
                                 if usingExtraCaptionRegLoss:
                                     extra = {}
-                                    captions = batch["extra"][0]
-                                    extra["input_ids"] = tokenizer[0](captions, padding=True, truncation=True,return_tensors="pt").input_ids
+                                    backup = {}
+                                    captions = batch["captions_reg"]
+                                    extra["input_ids"] = tokenizer[0](captions, padding="max_length", truncation=True, max_length=args.max_token_length, return_tensors="pt").input_ids.to(accelerator.device)
 
                                     if len(tokenizers) > 1:
-                                        extra["input_ids2"] = tokenizer[1](captions, padding=True, truncation=True, return_tensors="pt").input_ids
+                                        extra["input_ids2"] = tokenizer[1](captions, padding="max_length", truncation=True, max_length=args.max_token_length, return_tensors="pt").input_ids.to(accelerator.device)
                                     else:
                                         extra["input_ids2"] = None
-                                    breakpoint()
-                                    extra_text_encoder_conds = self.get_text_cond_bonus(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
+
+                                    extra_text_encoder_conds = self.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
+
                                         #train_util.get_hidden_states(args, extra_input_ids, tokenizers, text_encoders, weight_dtype)
+
 
 
                         # Sample noise, sample a random timestep for each image, and add noise to the latents,

@@ -157,7 +157,6 @@ class SdxlNetworkTrainer(train_network.NetworkTrainer):
         embs = sdxl_train_util.get_size_embeddings(orig_size, crop_size, target_size, accelerator.device).to(weight_dtype)
 
         # concat embeddings
-        breakpoint()
         encoder_hidden_states1, encoder_hidden_states2, pool2 = text_conds
         vector_embedding = torch.cat([pool2, embs], dim=1).to(weight_dtype)
         text_embedding = torch.cat([encoder_hidden_states1, encoder_hidden_states2], dim=2).to(weight_dtype)
