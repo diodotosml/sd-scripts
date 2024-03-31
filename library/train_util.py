@@ -161,6 +161,7 @@ class ImageInfo:
         self.text_encoder_pool2: Optional[torch.Tensor] = None
         # Image Slider, optional
         self.network_scale = 1
+        self.extra = ""
         self.grouping = image_key
         self.scanCaptionForScaleParameter()
         self.scanCaptionForGroupParameter()
@@ -174,10 +175,10 @@ class ImageInfo:
             self.caption = re.sub(scaleRegularExpression, "", self.caption)
 
     def scanCaptionForExtradataParameter(self):
-        extraRegularExpression = re.compile("--extra\\(\\s*([+-]?\\s*\\d+(?:\\.\\d+)?)\\s*\\)")
+        extraRegularExpression = re.compile("--extra\((.+?)\)")
         match = re.search(extraRegularExpression, self.caption)
         if match:
-            self.grouping = str(match.group(1))
+            self.extra = str(match.group(1))
             self.caption = re.sub(extraRegularExpression, "", self.caption)
 
 
@@ -1206,6 +1207,7 @@ class BaseDataset(torch.utils.data.Dataset):
         # per-sample network weights
         network_scale = []
         grouping = []
+        extra = []
 
         for image_key in bucket[image_index : image_index + bucket_batch_size]:
             image_info = self.image_data[image_key]
@@ -1213,6 +1215,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
             network_scale.append(image_info.network_scale)
             grouping.append(image_info.grouping)
+            extra.append(image_info.extra)
 
             subset = self.image_to_subset[image_key]
             loss_weights.append(
@@ -1385,6 +1388,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
         example["network_multipliers"] = torch.FloatTensor(network_scale)#torch.FloatTensor([self.network_multiplier] * len(captions))
         example["grouping"] = grouping
+        example["extra"] = extra
         if self.debug_dataset:
             example["image_keys"] = bucket[image_index : image_index + self.batch_size]
         return example
@@ -1401,6 +1405,7 @@ class BaseDataset(torch.utils.data.Dataset):
         random_crop = None
         network_multipliers = []
         grouping = []
+        extra = []
 
         for image_key in bucket[image_index : image_index + bucket_batch_size]:
             image_info = self.image_data[image_key]
@@ -1437,6 +1442,7 @@ class BaseDataset(torch.utils.data.Dataset):
             resized_sizes.append(image_info.resized_size)
             network_multipliers.append(image_info.network_multiplier)
             grouping.append(image_info.grouping)
+            extra.append(image_info.extra)
 
 
         example = {}
@@ -1455,6 +1461,7 @@ class BaseDataset(torch.utils.data.Dataset):
         example["bucket_reso"] = bucket_reso
         example["network_multipliers"] = image_info.network_multiplier
         example["grouping"] = image_info.grouping
+        example["extra"] = image_info.extra
         return example
 
 

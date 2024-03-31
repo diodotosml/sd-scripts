@@ -802,7 +802,6 @@ class NetworkTrainer:
                                     accelerator.print("NaN found in latents, replacing with zeros")
                                     latents = torch.nan_to_num(latents, 0, out=latents)
                         latents = latents * self.vae_scale_factor
-
                         # get multiplier for each sample
                         if network_has_multiplier:
                             multipliers = batch["network_multipliers"]
