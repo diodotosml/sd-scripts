@@ -2842,6 +2842,7 @@ def get_sai_model_spec(
 
     v2 = args.v2
     v_parameterization = args.v_parameterization
+    x0_prediction = args.x0_prediction
     reso = args.resolution
 
     title = args.metadata_title if args.metadata_title is not None else args.output_name
@@ -2870,6 +2871,7 @@ def get_sai_model_spec(
         tags=args.metadata_tags,
         timesteps=timesteps,
         clip_skip=args.clip_skip,  # None or int
+        x0_prediction=x0_prediction,
     )
     return metadata
 
@@ -3321,6 +3323,7 @@ def add_training_arguments(parser: argparse.ArgumentParser, support_dreambooth: 
         default="ddim",
         choices=[
             "ddim",
+            "ddpm",
             "pndm",
             "lms",
             "euler",
@@ -4904,6 +4907,7 @@ def get_my_scheduler(
     *,
     sample_sampler: str,
     v_parameterization: bool,
+    x0_prediction:bool,
 ):
     sched_init_args = {}
     if sample_sampler == "ddim":
@@ -4934,8 +4938,10 @@ def get_my_scheduler(
 
     if v_parameterization:
         sched_init_args["prediction_type"] = "v_prediction"
-    sched_init_args["prediction_type"] = "sample"
-    scheduler_cls = DDIMScheduler
+    if x0_prediction:
+        sched_init_args["prediction_type"] = "sample"
+
+
     scheduler = scheduler_cls(
         num_train_timesteps=SCHEDULER_TIMESTEPS,
         beta_start=SCHEDULER_LINEAR_START,
@@ -5188,6 +5194,7 @@ def sample_image_inference(
     scheduler = get_my_scheduler(
         sample_sampler=sampler_name,
         v_parameterization=args.v_parameterization,
+        x0_prediction=args.x0_prediction
     )
     pipeline.scheduler = scheduler
 
