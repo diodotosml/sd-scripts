@@ -838,7 +838,7 @@ class NetworkTrainer:
                                 if usingExtraCaptionRegLoss:
                                     captions = batch["extra"][0]
                                     extra_input_ids = tokenizer[0](captions, padding=True, truncation=True,return_tensors="pt").input_ids
-                                    extra_text_encoder_conds = train_util.get_hidden_states(args, extra_input_ids, tokenizers[0], text_encoders[0],weight_dtype)
+                                    extra_text_encoder_conds = train_util.get_hidden_states(args, extra_input_ids, tokenizers[0], text_encoders[0],weight_dtype).to(accelerator.device, dtype=weight_dtype)
 
 
                         # Sample noise, sample a random timestep for each image, and add noise to the latents,
