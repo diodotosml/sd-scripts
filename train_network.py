@@ -837,13 +837,15 @@ class NetworkTrainer:
 
                                 if usingExtraCaptionRegLoss:
                                     extra = []
-                                    extra["input_ids"] = tokenizer[0]([batch["extra"]], padding=True, truncation=True,return_tensors="pt").input_ids
+                                    captions = [batch["extra"],batch["extra"]]
+                                    extra_input_ids = tokenizer[0](captions, padding=True, truncation=True,return_tensors="pt").input_ids
                                     if len(tokenizers) > 1:
-                                        extra["input_ids2"] = tokenizer[1](
-                                            batch["extra"], padding=True, truncation=True, return_tensors="pt"
-                                        ).input_ids
+                                        extra_input_ids_2 = tokenizer[1](captions, padding=True, truncation=True, return_tensors="pt").input_ids
                                     else:
-                                        extra["input_ids2"] = None
+                                        extra_input_ids_2 = None
+                                    breakpoint()
+                                    extra["extra_input_ids"] = extra_input_ids
+                                    extra["extra_input_ids_2"] = extra_input_ids_2
                                     extra_text_encoder_conds = self.get_text_cond(
                                         args, accelerator, extra, tokenizers, text_encoders, weight_dtype
                                     )
