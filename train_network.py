@@ -803,7 +803,7 @@ class NetworkTrainer:
                                     latents = torch.nan_to_num(latents, 0, out=latents)
                         latents = latents * self.vae_scale_factor
 
-                        usingExtraCaptionRegLoss = extra in batch and not batch["extra"] == ""
+                        usingExtraCaptionRegLoss = "extra" in batch and not batch["extra"] == ""
                         logger.info("usingExtraCaptionRegLoss:")
                         logger.info(usingExtraCaptionRegLoss)
                         # get multiplier for each sample
