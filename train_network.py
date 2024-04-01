@@ -7,6 +7,8 @@ import random
 import time
 import json
 from multiprocessing import Value
+from typing import Optional
+
 import toml
 
 from tqdm import tqdm
@@ -137,6 +139,34 @@ class NetworkTrainer:
 
     def sample_images(self, accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet):
         train_util.sample_images(accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet)
+
+
+    def generate_caption_ids(self, tokenizers, captions, text_encoders, accelerator, weight_dtype):
+        extra = {}
+        extra["input_ids"] = tokenizers[0](captions, padding="max_length", truncation=True,max_length=args.max_token_length, return_tensors="pt").input_ids.to(accelerator.device)
+
+        if len(tokenizers) > 1:
+            extra["input_ids2"] = tokenizers[1](captions, padding="max_length", truncation=True,max_length=args.max_token_length, return_tensors="pt").input_ids.to(accelerator.device)
+        else:
+            extra["input_ids2"] = None
+
+        return self.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
+
+
+    def set_network_multiplier(self,batch,network,accelerator, scale:Optional[float]):
+
+        if scale:
+            multipliers = [torch.FloatTensor(scale)]
+        else:
+            multipliers = batch["network_multipliers"]
+
+        # if all multipliers are same, use single multiplier
+        if torch.all(multipliers == multipliers[0]):
+            multipliers = multipliers[0].item()
+        else:
+            raise NotImplementedError("multipliers for each sample is not supported yet")
+        # print(f"set multiplier: {multipliers}")
+        accelerator.unwrap_model(network).set_multiplier(multipliers)
 
     def train(self, args):
         session_id = random.randint(0, 2**32)
@@ -811,14 +841,7 @@ class NetworkTrainer:
 
                         # get multiplier for each sample
                         if network_has_multiplier:
-                            multipliers = batch["network_multipliers"]
-                            # if all multipliers are same, use single multiplier
-                            if torch.all(multipliers == multipliers[0]):
-                                multipliers = multipliers[0].item()
-                            else:
-                                raise NotImplementedError("multipliers for each sample is not supported yet")
-                            # print(f"set multiplier: {multipliers}")
-                            accelerator.unwrap_model(network).set_multiplier(multipliers)
+                            self.set_network_multiplier(batch, network, accelerator)
 
                         with torch.set_grad_enabled(train_text_encoder), accelerator.autocast():
                             # Get the text embedding for conditioning
@@ -836,20 +859,7 @@ class NetworkTrainer:
                                 text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
 
                                 if calculateRegCaptionLoss:
-                                    extra = {}
-                                    captions = batch["captions_reg"]
-                                    extra["input_ids"] = tokenizer[0](captions, padding="max_length", truncation=True, max_length=args.max_token_length, return_tensors="pt").input_ids.to(accelerator.device)
-
-                                    if len(tokenizers) > 1:
-                                        extra["input_ids2"] = tokenizer[1](captions, padding="max_length", truncation=True, max_length=args.max_token_length, return_tensors="pt").input_ids.to(accelerator.device)
-                                    else:
-                                        extra["input_ids2"] = None
-
-                                    extra_text_encoder_conds = self.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
-
-                                        #train_util.get_hidden_states(args, extra_input_ids, tokenizers, text_encoders, weight_dtype)
-
-
+                                    extra_text_encoder_conds = self.generate_caption_ids(extra,tokenizers, batch["captions_reg"], text_encoders, accelerator, weight_dtype)  #.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
 
                         # Sample noise, sample a random timestep for each image, and add noise to the latents,
                         # with noise offset and/or multires noise if specified

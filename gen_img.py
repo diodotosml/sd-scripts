@@ -1603,7 +1603,7 @@ def main(args):
         has_clip_sample = False
     elif args.sampler == "euler_a" or args.sampler == "k_euler_a":
         scheduler_cls = EulerAncestralDiscreteSchedulerGL
-        scheduler_module = diffusers.schedulers.scheduling_euler_ancestral_discrete
+        scheduler_module = EulerAncestralDiscreteSchedulerGL
         has_clip_sample = False
     elif args.sampler == "dpmsolver" or args.sampler == "dpmsolver++":
         scheduler_cls = DPMSolverMultistepScheduler
