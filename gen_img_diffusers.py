@@ -2326,6 +2326,8 @@ def main(args):
 
     if args.v_parameterization:
         sched_init_args["prediction_type"] = "v_prediction"
+    if args.x0_prediction:
+        sched_init_args["prediction_type"] = "v_prediction"
 
     # samplerの乱数をあらかじめ指定するための処理
 

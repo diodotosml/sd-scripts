@@ -64,6 +64,7 @@ IMPL_DIFFUSERS = "diffusers"
 
 PRED_TYPE_EPSILON = "epsilon"
 PRED_TYPE_V = "v"
+PRED_TYPE_SAMPLE = "sample"
 
 
 def load_bytes_in_safetensors(tensors):
@@ -113,6 +114,7 @@ def build_metadata(
     merged_from: Optional[str] = None,
     timesteps: Optional[Tuple[int, int]] = None,
     clip_skip: Optional[int] = None,
+    x0_prediction: bool = False
 ):
     # if state_dict is None, hash is not calculated
 
@@ -215,6 +217,8 @@ def build_metadata(
 
     if v_parameterization:
         metadata["modelspec.prediction_type"] = PRED_TYPE_V
+    elif x0_prediction:
+        metadata["modelspec.prediction_type"] = PRED_TYPE_SAMPLE
     else:
         metadata["modelspec.prediction_type"] = PRED_TYPE_EPSILON
 
