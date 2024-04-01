@@ -893,6 +893,8 @@ class NetworkTrainer:
                         if args.v_parameterization:
                             # v-parameterization training
                             target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                        elif args.x0_prediction:
+                            target = latents
                         else:
                             target = noise
 

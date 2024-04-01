@@ -2864,6 +2864,7 @@ def get_sai_model_spec(
 
     v2 = args.v2
     v_parameterization = args.v_parameterization
+    x0_prediction = args.x0_prediction
     reso = args.resolution
 
     title = args.metadata_title if args.metadata_title is not None else args.output_name
@@ -2892,6 +2893,7 @@ def get_sai_model_spec(
         tags=args.metadata_tags,
         timesteps=timesteps,
         clip_skip=args.clip_skip,  # None or int
+        x0_prediction=x0_prediction,
     )
     return metadata
 
@@ -2903,6 +2905,12 @@ def add_sd_models_arguments(parser: argparse.ArgumentParser):
     )
     parser.add_argument(
         "--v_parameterization", action="store_true", help="enable v-parameterization training / v-parameterization学習を有効にする"
+    )
+    parser.add_argument(
+        "--x0_prediction",
+        action="store_true",
+        default=None,
+        help="",
     )
     parser.add_argument(
         "--pretrained_model_name_or_path",
@@ -3343,6 +3351,7 @@ def add_training_arguments(parser: argparse.ArgumentParser, support_dreambooth: 
         default="ddim",
         choices=[
             "ddim",
+            "ddpm",
             "pndm",
             "lms",
             "euler",
@@ -4926,6 +4935,7 @@ def get_my_scheduler(
     *,
     sample_sampler: str,
     v_parameterization: bool,
+    x0_prediction:bool,
 ):
     sched_init_args = {}
     if sample_sampler == "ddim":
@@ -4956,6 +4966,9 @@ def get_my_scheduler(
 
     if v_parameterization:
         sched_init_args["prediction_type"] = "v_prediction"
+    if x0_prediction:
+        sched_init_args["prediction_type"] = "sample"
+
 
     scheduler = scheduler_cls(
         num_train_timesteps=SCHEDULER_TIMESTEPS,
@@ -5099,6 +5112,7 @@ def sample_images_common(
     default_scheduler = get_my_scheduler(
         sample_sampler=args.sample_sampler,
         v_parameterization=args.v_parameterization,
+        x0_prediction=args.x0_prediction
     )
 
     pipeline = pipe_class(
@@ -5209,6 +5223,7 @@ def sample_image_inference(
     scheduler = get_my_scheduler(
         sample_sampler=sampler_name,
         v_parameterization=args.v_parameterization,
+        x0_prediction=args.x0_prediction
     )
     pipeline.scheduler = scheduler
 
@@ -5263,6 +5278,7 @@ def sample_image_inference(
             raise ImportError("No wandb / wandb がインストールされていないようです")
 
         wandb_tracker.log({f"sample_{i}": wandb.Image(image)})
+        wandb_tracker.log({f"prompt_{i}": prompt})
     except:  # wandb 無効時
         pass
 

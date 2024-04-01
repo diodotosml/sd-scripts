@@ -273,6 +273,12 @@ def setup_parser() -> argparse.ArgumentParser:
         help="make LoRA metadata for v-parameterization (default is same to v2) / 作成するLoRAのメタデータにv-parameterization用と設定する（省略時はv2と同じ）",
     )
     parser.add_argument(
+        "--x0_prediction",
+        action="store_true",
+        default=None,
+        help="",
+    )
+    parser.add_argument(
         "--sdxl", action="store_true", help="load Stable Diffusion SDXL base model / Stable Diffusion SDXL baseのモデルを読み込む"
     )
     parser.add_argument(
