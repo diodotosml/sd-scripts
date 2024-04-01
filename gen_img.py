@@ -1603,7 +1603,7 @@ def main(args):
         has_clip_sample = False
     elif args.sampler == "euler_a" or args.sampler == "k_euler_a":
         scheduler_cls = EulerAncestralDiscreteSchedulerGL
-        scheduler_module = EulerAncestralDiscreteSchedulerGL
+        scheduler_module = diffusers.schedulers.scheduling_euler_ancestral_discrete
         has_clip_sample = False
     elif args.sampler == "dpmsolver" or args.sampler == "dpmsolver++":
         scheduler_cls = DPMSolverMultistepScheduler
@@ -1631,8 +1631,6 @@ def main(args):
 
     if args.v_parameterization:
         sched_init_args["prediction_type"] = "v_prediction"
-    if args.x0_prediction:
-        sched_init_args["prediction_type"] = "sample"
 
     # 警告を出さないようにする
     if has_steps_offset:
