@@ -153,7 +153,7 @@ class NetworkTrainer:
         return self.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
 
 
-    def set_network_multiplier(self,batch,network,accelerator, scale:Optional[float]):
+    def set_network_multiplier(self,batch,network,accelerator, scale:Optional[float] = None):
 
         if scale:
             multipliers = [torch.FloatTensor(scale)]
