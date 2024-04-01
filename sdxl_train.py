@@ -769,6 +769,8 @@ def setup_parser() -> argparse.ArgumentParser:
     train_util.add_dataset_arguments(parser, True, True, True)
     train_util.add_training_arguments(parser, False)
     train_util.add_masked_loss_arguments(parser)
+    train_util.add_masked_two_caption_loss_arguments(parser)
+    train_util.add_reg_caption_loss_arguments(parser)
     deepspeed_utils.add_deepspeed_arguments(parser)
     train_util.add_sd_saving_arguments(parser)
     train_util.add_optimizer_arguments(parser)

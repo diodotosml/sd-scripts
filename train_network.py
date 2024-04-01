@@ -806,10 +806,9 @@ class NetworkTrainer:
                                     accelerator.print("NaN found in latents, replacing with zeros")
                                     latents = torch.nan_to_num(latents, 0, out=latents)
                         latents = latents * self.vae_scale_factor
+                        # TODO: Use constants instead of text
+                        calculateRegCaptionLoss = args.reg_captions and "captions_reg" in batch
 
-                        usingExtraCaptionRegLoss = "caption_reg" in batch and not batch["caption_reg"] == ""
-                        logger.info("usingExtraCaptionRegLoss:")
-                        logger.info(usingExtraCaptionRegLoss)
                         # get multiplier for each sample
                         if network_has_multiplier:
                             multipliers = batch["network_multipliers"]
@@ -836,9 +835,8 @@ class NetworkTrainer:
 
                                 text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
 
-                                if usingExtraCaptionRegLoss:
+                                if calculateRegCaptionLoss:
                                     extra = {}
-                                    backup = {}
                                     captions = batch["captions_reg"]
                                     extra["input_ids"] = tokenizer[0](captions, padding="max_length", truncation=True, max_length=args.max_token_length, return_tensors="pt").input_ids.to(accelerator.device)
 
@@ -878,7 +876,7 @@ class NetworkTrainer:
                                 batch,
                                 weight_dtype,
                             )
-                            if usingExtraCaptionRegLoss:
+                            if calculateRegCaptionLoss:
                                 reg_noise_pred = self.call_unet(
                                     args,
                                     accelerator,
@@ -907,12 +905,6 @@ class NetworkTrainer:
                         loss_weights = batch["loss_weights"]  # 各sampleごとのweight
                         loss = loss * loss_weights
 
-                        if usingExtraCaptionRegLoss:
-                            extra_loss = torch.nn.functional.mse_loss(reg_noise_pred.float(), target.float(),reduction="none")
-                            extra_loss = extra_loss.mean([1, 2, 3])
-                            extra_loss = extra_loss * loss_weights
-                            loss = loss + ((abs(extra_loss - 0.6)) / len(batches))
-
                         if args.min_snr_gamma:
                             loss = apply_snr_weight(loss, timesteps, noise_scheduler, args.min_snr_gamma, args.v_parameterization)
                         if args.scale_v_pred_loss_like_noise_pred:
@@ -923,6 +915,17 @@ class NetworkTrainer:
                             loss = apply_debiased_estimation(loss, timesteps, noise_scheduler)
 
                         loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
+
+                        if calculateRegCaptionLoss:
+                            extra_loss = torch.nn.functional.mse_loss(reg_noise_pred.float(), target.float(),reduction="none")
+
+                            if(args.masked_two_caption_loss):
+                                extra_loss = apply_masked_loss(extra_loss, batch, 1, -1)
+
+                            extra_loss = extra_loss.mean([1, 2, 3])
+                            extra_loss = extra_loss * loss_weights
+                            extra_loss = extra_loss.mean()
+                            loss = (loss + extra_loss).mean()
 
                         accelerator.backward(loss)
                         if accelerator.sync_gradients:
@@ -1034,6 +1037,8 @@ def setup_parser() -> argparse.ArgumentParser:
     train_util.add_dataset_arguments(parser, True, True, True)
     train_util.add_training_arguments(parser, True)
     train_util.add_masked_loss_arguments(parser)
+    train_util.add_masked_two_caption_loss_arguments(parser)
+    train_util.add_reg_caption_loss_arguments(parser)
     deepspeed_utils.add_deepspeed_arguments(parser)
     train_util.add_optimizer_arguments(parser)
     config_util.add_config_arguments(parser)

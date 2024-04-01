@@ -114,7 +114,9 @@ def build_metadata(
     merged_from: Optional[str] = None,
     timesteps: Optional[Tuple[int, int]] = None,
     clip_skip: Optional[int] = None,
-    x0_prediction: bool = False
+    x0_prediction: bool = False,
+    reg_captions: bool = False,
+    masked_two_caption_loss = False,
 ):
     # if state_dict is None, hash is not calculated
 

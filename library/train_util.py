@@ -2894,6 +2894,8 @@ def get_sai_model_spec(
         timesteps=timesteps,
         clip_skip=args.clip_skip,  # None or int
         x0_prediction=x0_prediction,
+        masked_two_caption_loss=args.masked_two_caption_loss,
+        reg_captions=args.reg_captions
     )
     return metadata
 
@@ -3419,20 +3421,33 @@ def add_training_arguments(parser: argparse.ArgumentParser, support_dreambooth: 
             "--prior_loss_weight", type=float, default=1.0, help="loss weight for regularization images / 正則化画像のlossの重み"
         )
 
-
 def add_masked_loss_arguments(parser: argparse.ArgumentParser):
-    parser.add_argument(
-        "--conditioning_data_dir",
-        type=str,
-        default=None,
-        help="conditioning data directory / 条件付けデータのディレクトリ",
-    )
     parser.add_argument(
         "--masked_loss",
         action="store_true",
         help="apply mask for calculating loss. conditioning_data_dir is required for dataset. / 損失計算時にマスクを適用する。datasetにはconditioning_data_dirが必要",
     )
 
+    parser.add_argument(
+        "--conditioning_data_dir",
+        type=str,
+        default=None,
+        help="conditioning data directory / 条件付けデータのディレクトリ",
+    )
+
+def add_masked_two_caption_loss_arguments(parser: argparse.ArgumentParser):
+    parser.add_argument(
+        "--masked_two_caption_loss",
+        action="store_true",
+        help="apply mask for calculating loss. conditioning_data_dir is required for dataset. / 損失計算時にマスクを適用する。datasetにはconditioning_data_dirが必要",
+    )
+
+def add_reg_caption_loss_arguments(parser: argparse.ArgumentParser):
+    parser.add_argument(
+        "--reg_captions",
+        action="store_true",
+        help="",
+    )
 
 def verify_training_args(args: argparse.Namespace):
     r"""
