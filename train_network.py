@@ -907,7 +907,7 @@ class NetworkTrainer:
 
                         if usingExtraCaptionRegLoss:
                             extra_loss = torch.nn.functional.mse_loss(reg_noise_pred.float(), target.float(),reduction="none")
-                            loss = 1 + loss * 2 - (extra_loss / len(batches))
+                            loss = 10 + loss * 2 - (extra_loss / len(batches))
 
                         if args.min_snr_gamma:
                             loss = apply_snr_weight(loss, timesteps, noise_scheduler, args.min_snr_gamma, args.v_parameterization)
