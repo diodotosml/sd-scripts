@@ -211,7 +211,7 @@ class EulerAncestralDiscreteSchedulerGL(EulerAncestralDiscreteScheduler):
             # * c_out + input * c_skip
             pred_original_sample = model_output * (-sigma / (sigma**2 + 1) ** 0.5) + (sample / (sigma**2 + 1))
         elif self.config.prediction_type == "sample":
-            raise NotImplementedError("prediction_type not implemented yet: sample")
+            pred_original_sample = model_output
         else:
             raise ValueError(f"prediction_type given as {self.config.prediction_type} must be one of `epsilon`, or `v_prediction`")
 
