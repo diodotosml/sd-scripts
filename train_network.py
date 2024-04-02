@@ -957,7 +957,6 @@ class NetworkTrainer:
 
                         # Calculate UnetSamplingRegLoss
                         if bonusParam.unetSampling:
-                            accelerator.log("Applying unet loss")
                             unet_reg_loss = torch.nn.functional.mse_loss(noise_pred.float(), unet_reg_noise_pred.float() ,reduction="none")
 
                             unet_reg_loss = unet_reg_loss.mean([1, 2, 3])
