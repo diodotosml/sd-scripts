@@ -1009,7 +1009,7 @@ class NetworkTrainer:
                                     remove_model(remove_ckpt_name)
 
                     current_loss = loss.detach().item()
-                    loss_recorder.add(epoch=epoch, step=global_step, loss=current_loss)
+                    loss_recorder.add(epoch=epoch, step=step, loss=current_loss)
                     avr_loss: float = loss_recorder.moving_average
                     logs = {"avr_loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
 
