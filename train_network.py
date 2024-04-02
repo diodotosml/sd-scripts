@@ -761,6 +761,7 @@ class NetworkTrainer:
             )
 
         loss_recorder = train_util.LossRecorder()
+        #unet_loss_recorder = train_util.LossRecorder()
         del train_dataset_group
 
         # callback for step start
@@ -838,7 +839,7 @@ class NetworkTrainer:
                                     latents = torch.nan_to_num(latents, 0, out=latents)
                         latents = latents * self.vae_scale_factor
                         # TODO: Use constants instead of text
-                        calculateRegCaptionLoss = args.reg_captions and "captions_reg" in batch
+                        calculateRegCaptionLoss = not bonusParam.unetSampling and args.reg_captions and "captions_reg" in batch
 
                         # get multiplier for each sample
                         if network_has_multiplier:
@@ -941,6 +942,7 @@ class NetworkTrainer:
                         loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
 
                         if calculateRegCaptionLoss:
+                            accelerator.log("Applying reg caption loss")
                             extra_loss = torch.nn.functional.mse_loss(reg_noise_pred.float(), target.float(),reduction="none")
 
                             if(args.masked_two_caption_loss):
@@ -954,6 +956,7 @@ class NetworkTrainer:
 
                         # Calculate UnetSamplingRegLoss
                         if bonusParam.unetSampling:
+                            accelerator.log("Applying unet loss")
                             unet_reg_loss = torch.nn.functional.mse_loss(noise_pred.float(), unet_reg_noise_pred.float() ,reduction="none")
 
                             unet_reg_loss = unet_reg_loss.mean([1, 2, 3])
@@ -1009,10 +1012,11 @@ class NetworkTrainer:
                     loss_recorder.add(epoch=epoch, step=global_step, loss=current_loss)
                     avr_loss: float = loss_recorder.moving_average
                     logs = {"avr_loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
-                    if bonusParam.unetSampling:
-                        logs[""]
 
                     progress_bar.set_postfix(**logs)
+
+                    #if bonusParam.unetSampling:
+                    #    unet_loss_recorder.add(epoch=epoch, step=global_step, loss=unet_reg_loss.detach().item())
 
                     if args.scale_weight_norms:
                         progress_bar.set_postfix(**{**max_mean_logs, **logs})
@@ -1020,6 +1024,7 @@ class NetworkTrainer:
                     if args.logging_dir is not None:
                         logs = self.generate_step_logs(args, current_loss, avr_loss, lr_scheduler, keys_scaled, mean_norm, maximum_norm)
                         accelerator.log(logs, step=global_step)
+
 
                     if global_step >= args.max_train_steps:
                         break
