@@ -819,6 +819,7 @@ class NetworkTrainer:
 
             for batches in groups.values():
                 for step, batch in batches:
+                    bonusParam: train_util.BonusParams = batch["bonus_params"][0]
                     current_step.value = global_step
                     with accelerator.accumulate(network):
                         on_step_start(text_encoder, unet)
@@ -897,6 +898,19 @@ class NetworkTrainer:
                                     batch,
                                     weight_dtype,
                                 )
+                            if bonusParam.unetSampling:
+                                self.set_network_multiplier(batch, network, accelerator, 0)
+                                unet_reg_noise_pred = self.call_unet(
+                                    args,
+                                    accelerator,
+                                    unet,
+                                    noisy_latents.requires_grad_(train_unet),
+                                    timesteps,
+                                    extra_text_encoder_conds,
+                                    batch,
+                                    weight_dtype,
+                                )
+                                self.set_network_multiplier(batch, network, accelerator)
 
                         if args.v_parameterization:
                             # v-parameterization training
@@ -936,6 +950,16 @@ class NetworkTrainer:
                             extra_loss = extra_loss * loss_weights
                             extra_loss = extra_loss.mean()
                             loss = (loss + extra_loss).mean()
+
+
+                        # Calculate UnetSamplingRegLoss
+                        if bonusParam.unetSampling:
+                            unet_reg_loss = torch.nn.functional.mse_loss(noise_pred.float(), unet_reg_noise_pred.float() ,reduction="none")
+
+                            unet_reg_loss = unet_reg_loss.mean([1, 2, 3])
+                            unet_reg_loss = unet_reg_loss * loss_weights
+                            unet_reg_loss = unet_reg_loss.mean()
+                            loss = (loss + unet_reg_loss * bonusParam.unetSamplingMultiplier).mean()
 
                         accelerator.backward(loss)
                         if accelerator.sync_gradients:

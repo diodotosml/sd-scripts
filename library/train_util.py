@@ -136,6 +136,10 @@ IMAGE_TRANSFORMS = transforms.Compose(
 
 TEXT_ENCODER_OUTPUTS_CACHE_SUFFIX = "_te_outputs.npz"
 
+class BonusParams:
+    def __init__(self, unetSampling:bool = False, unetSamplingMultiplier:float = 1.0):
+        self.unetSampling = unetSampling
+        self.unetSamplingMultiplier = unetSamplingMultiplier
 
 class ImageInfo:
     def __init__(self, image_key: str, num_repeats: int, caption: str, is_reg: bool, absolute_path: str) -> None:
@@ -164,6 +168,7 @@ class ImageInfo:
         self.extra = ""
         self.grouping = image_key
         self.caption_reg: str = ""
+        self.bonus_params = self.scanCaptionForBonusParameters()
         self.scanCaptionForScaleParameter()
         self.scanCaptionForGroupParameter()
         self.scanCaptionForExtradataParameter()
@@ -176,12 +181,26 @@ class ImageInfo:
             self.network_scale = float(match.group(1))
             self.caption = re.sub(scaleRegularExpression, "", self.caption)
 
+    def scanForParameter(self, parameter: str):
+        regularExpression = re.compile(f'--{parameter}\\(\\s*([+-]?\\s*\\d+(?:\\.\\d+)?)\\s*\\)')
+        match = re.search(regularExpression, self.caption)
+        if match:
+            self.caption = re.sub(regularExpression, "", self.caption)
+            return float(match.group(1))
+        return None
+
+    def scanCaptionForBonusParameters(self):
+        unetParam = self.scanForParameter("unet")
+        BonusParams(unetSampling=unetParam)
+
+
     def scanCaptionForExtradataParameter(self):
         extraRegularExpression = re.compile("--extra\((.+?)\)")
         match = re.search(extraRegularExpression, self.caption)
         if match:
             self.extra = str(match.group(1))
             self.caption = re.sub(extraRegularExpression, "", self.caption)
+
     def scanCaptionForRegCaptionParameter(self):
         extraRegularExpression = re.compile("--reg\((.+?)\)")
         match = re.search(extraRegularExpression, self.caption)
@@ -1201,6 +1220,7 @@ class BaseDataset(torch.utils.data.Dataset):
         loss_weights = []
         captions = []
         captions_reg = []
+        bonus_params = []
         input_ids_list = []
         input_ids2_list = []
         latents_list = []
@@ -1225,6 +1245,7 @@ class BaseDataset(torch.utils.data.Dataset):
             grouping.append(image_info.grouping)
             extra.append(image_info.extra)
             captions_reg.append(image_info.caption_reg)
+            bonus_params.append(image_info.bonus_params)
             subset = self.image_to_subset[image_key]
             loss_weights.append(
                 self.prior_loss_weight if image_info.is_reg else 1.0
@@ -1311,6 +1332,7 @@ class BaseDataset(torch.utils.data.Dataset):
             # captionとtext encoder outputを処理する
             caption = image_info.caption  # default
             caption_reg = image_info.caption_reg  # default
+            bonus_params = image_info.bonus_params
             if image_info.text_encoder_outputs1 is not None:
                 text_encoder_outputs1_list.append(image_info.text_encoder_outputs1)
                 text_encoder_outputs2_list.append(image_info.text_encoder_outputs2)
@@ -1476,6 +1498,7 @@ class BaseDataset(torch.utils.data.Dataset):
         example["grouping"] = image_info.grouping
         example["extra"] = image_info.extra
         example["captions_reg"] = image_info.caption_reg
+        example["bonus_params"] = image_info.bonus_params
         return example
 
 
