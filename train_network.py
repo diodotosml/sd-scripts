@@ -943,7 +943,7 @@ class NetworkTrainer:
                         loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
 
                         if calculateRegCaptionLoss:
-                            accelerator.log("Applying reg caption loss")
+                            print("Applying reg caption loss")
                             extra_loss = torch.nn.functional.mse_loss(reg_noise_pred.float(), target.float(),reduction="none")
 
                             if(args.masked_two_caption_loss):
@@ -957,12 +957,12 @@ class NetworkTrainer:
 
                         # Calculate UnetSamplingRegLoss
                         if bonusParam.unetSampling:
+                            print("unetsampling")
                             unet_reg_loss = torch.nn.functional.mse_loss(noise_pred.float(), unet_reg_noise_pred.float() ,reduction="none")
 
                             unet_reg_loss = unet_reg_loss.mean([1, 2, 3])
                             unet_reg_loss = unet_reg_loss * loss_weights
                             unet_reg_loss = unet_reg_loss.mean()
-                            print(bonusParam.unetSamplingMultiplier)
                             loss = (loss + unet_reg_loss * bonusParam.unetSamplingMultiplier).mean()
 
                         accelerator.backward(loss)
