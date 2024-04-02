@@ -840,6 +840,7 @@ class NetworkTrainer:
                         latents = latents * self.vae_scale_factor
                         # TODO: Use constants instead of text
                         calculateRegCaptionLoss = not bonusParam.unetSampling and args.reg_captions and "captions_reg" in batch
+                        hasRegCaption = args.reg_captions and "captions_reg" in batch
 
                         # get multiplier for each sample
                         if network_has_multiplier:
@@ -860,7 +861,7 @@ class NetworkTrainer:
 
                                 text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
 
-                                if calculateRegCaptionLoss:
+                                if hasRegCaption:
                                     extra_text_encoder_conds = self.generate_caption_ids(tokenizers, batch["captions_reg"], text_encoders, accelerator, args, weight_dtype)  #.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
 
                         # Sample noise, sample a random timestep for each image, and add noise to the latents,
