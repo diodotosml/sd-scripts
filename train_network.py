@@ -859,7 +859,7 @@ class NetworkTrainer:
                                 text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
 
                                 if calculateRegCaptionLoss:
-                                    extra_text_encoder_conds = self.generate_caption_ids(extra,tokenizers, batch["captions_reg"], text_encoders, accelerator, weight_dtype)  #.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
+                                    extra_text_encoder_conds = self.generate_caption_ids(tokenizers, batch["captions_reg"], text_encoders, accelerator, weight_dtype)  #.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
 
                         # Sample noise, sample a random timestep for each image, and add noise to the latents,
                         # with noise offset and/or multires noise if specified
