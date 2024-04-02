@@ -1221,7 +1221,6 @@ class BaseDataset(torch.utils.data.Dataset):
         loss_weights = []
         captions = []
         captions_reg = []
-        bonus_params = []
         input_ids_list = []
         input_ids2_list = []
         latents_list = []
@@ -1237,6 +1236,7 @@ class BaseDataset(torch.utils.data.Dataset):
         network_scale = []
         grouping = []
         extra = []
+        bonus_params = []
 
         for image_key in bucket[image_index : image_index + bucket_batch_size]:
             image_info = self.image_data[image_key]
@@ -1442,6 +1442,7 @@ class BaseDataset(torch.utils.data.Dataset):
         grouping = []
         extra = []
         captions_reg = []
+        bonus_params = []
 
         for image_key in bucket[image_index : image_index + bucket_batch_size]:
             image_info = self.image_data[image_key]
@@ -1480,6 +1481,7 @@ class BaseDataset(torch.utils.data.Dataset):
             grouping.append(image_info.grouping)
             extra.append(image_info.extra)
             captions_reg.append(image_info.caption_reg)
+            bonus_params.append(image_info.bonus_params)
 
 
         example = {}

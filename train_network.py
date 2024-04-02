@@ -819,6 +819,7 @@ class NetworkTrainer:
 
             for batches in groups.values():
                 for step, batch in batches:
+                    breakpoint()
                     bonusParam = batch["bonus_params"]
                     current_step.value = global_step
                     with accelerator.accumulate(network):
