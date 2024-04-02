@@ -1422,6 +1422,7 @@ class BaseDataset(torch.utils.data.Dataset):
         example["grouping"] = grouping
         example["extra"] = extra
         example["captions_reg"] = captions_reg
+        example["bonus_params"] = bonus_params
         if self.debug_dataset:
             example["image_keys"] = bucket[image_index : image_index + self.batch_size]
         return example
