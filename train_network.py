@@ -141,7 +141,7 @@ class NetworkTrainer:
         train_util.sample_images(accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet)
 
 
-    def generate_caption_ids(self, tokenizers, captions, text_encoders, accelerator, weight_dtype):
+    def generate_caption_ids(self, tokenizers, captions, text_encoders, accelerator, args, weight_dtype):
         extra = {}
         extra["input_ids"] = tokenizers[0](captions, padding="max_length", truncation=True,max_length=args.max_token_length, return_tensors="pt").input_ids.to(accelerator.device)
 
@@ -859,7 +859,7 @@ class NetworkTrainer:
                                 text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
 
                                 if calculateRegCaptionLoss:
-                                    extra_text_encoder_conds = self.generate_caption_ids(tokenizers, batch["captions_reg"], text_encoders, accelerator, weight_dtype)  #.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
+                                    extra_text_encoder_conds = self.generate_caption_ids(tokenizers, batch["captions_reg"], text_encoders, accelerator, args, weight_dtype)  #.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
 
                         # Sample noise, sample a random timestep for each image, and add noise to the latents,
                         # with noise offset and/or multires noise if specified
