@@ -819,7 +819,7 @@ class NetworkTrainer:
 
             for batches in groups.values():
                 for step, batch in batches:
-                    bonusParam = batch["bonus_params"][0]
+                    bonusParam = batch["bonus_params"]
                     current_step.value = global_step
                     with accelerator.accumulate(network):
                         on_step_start(text_encoder, unet)
