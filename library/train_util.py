@@ -190,8 +190,9 @@ class ImageInfo:
         return None
 
     def scanCaptionForBonusParameters(self):
-        unetParam = self.scanForParameter("unet")
-        BonusParams(unetSampling=unetParam)
+        unet_params = self.scanForParameter("unet")
+        return BonusParams(unetSampling=unet_params)
+
 
 
     def scanCaptionForExtradataParameter(self):
