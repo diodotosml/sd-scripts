@@ -490,8 +490,8 @@ def apply_masked_loss(loss, batch, args:object, offset: int = 0, multiplier: int
     loss = loss * mask_image
 
     if args.normalize_masked_loss:
-        ratio = ((batch["conditioning_images"] * -1) + 1).to(dtype=loss.dtype)[:, 0].unsqueeze(1) / batch["conditioning_images"].to(dtype=loss.dtype)[:, 0].unsqueeze(1).mean()
-        loss * ratio
+        ratio = ((batch["conditioning_images"] * -1) + 1).to(dtype=loss.dtype)[:, 0].unsqueeze(1) / batch["conditioning_images"].to(dtype=loss.dtype)[:, 0].unsqueeze(1)
+        loss * ratio.mean()
 
     return loss
 
