@@ -796,7 +796,8 @@ class NetworkTrainer:
 
         # For --sample_at_first
         self.sample_images(accelerator, args, 0, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
-
+        caption_ids = {}
+        pred_noise_list = {}
         # training loop
         for epoch in range(num_train_epochs):
             accelerator.print(f"\nepoch {epoch+1}/{num_train_epochs}")
@@ -820,7 +821,7 @@ class NetworkTrainer:
 
             for batches in groups.values():
                 for step, batch in batches:
-                    bonusParam = batch["bonus_params"]
+                    bonusParam: train_util.BonusParams = batch["bonus_params"]
                     current_step.value = global_step
                     with accelerator.accumulate(network):
                         on_step_start(text_encoder, unet)
@@ -862,7 +863,16 @@ class NetworkTrainer:
                                 text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
 
                                 if hasRegCaption:
-                                    extra_text_encoder_conds = self.generate_caption_ids(tokenizers, batch["captions_reg"], text_encoders, accelerator, args, weight_dtype)  #.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
+                                    reg_text_encoder_conds = self.generate_caption_ids(tokenizers, batch["captions_reg"], text_encoders, accelerator, args, weight_dtype)  #.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
+                                if bonusParam.blueMaskCaption and "blueMaskCaption" not in caption_ids:
+                                    caption_ids["blueMaskCaption"] = self.generate_caption_ids(tokenizers, bonusParam.blueMaskCaption, text_encoders, accelerator, args, weight_dtype)
+                                if bonusParam.greenMaskCaption and "greenMaskCaption" not in caption_ids:
+                                    caption_ids["greenMaskCaption"] = self.generate_caption_ids(tokenizers, bonusParam.greenMaskCaption, text_encoders, accelerator, args, weight_dtype)
+                                if bonusParam.antiBlueMaskCaption and "antiBlueMaskCaption" not in caption_ids:
+                                    caption_ids["antiBlueMaskCaption"] = self.generate_caption_ids(tokenizers, bonusParam.antiBlueMaskCaption, text_encoders, accelerator, args, weight_dtype)
+                                if bonusParam.antiGreenMaskCaption and "antiGreenMaskCaption" not in caption_ids:
+                                    caption_ids["antiGreenMaskCaption"] = self.generate_caption_ids(tokenizers, bonusParam.antiGreenMaskCaption, text_encoders, accelerator, args, weight_dtype)
+
 
                         # Sample noise, sample a random timestep for each image, and add noise to the latents,
                         # with noise offset and/or multires noise if specified
@@ -896,7 +906,7 @@ class NetworkTrainer:
                                     unet,
                                     noisy_latents.requires_grad_(train_unet),
                                     timesteps,
-                                    extra_text_encoder_conds,
+                                    reg_text_encoder_conds,
                                     batch,
                                     weight_dtype,
                                 )
@@ -908,11 +918,55 @@ class NetworkTrainer:
                                     unet,
                                     noisy_latents.requires_grad_(train_unet),
                                     timesteps,
-                                    extra_text_encoder_conds,
+                                    reg_text_encoder_conds,
                                     batch,
                                     weight_dtype,
                                 )
                                 self.set_network_multiplier(batch, network, accelerator)
+                            if bonusParam.blueMaskCaption:
+                                pred_noise_list["blueMaskCaption"] = self.call_unet(
+                                    args,
+                                    accelerator,
+                                    unet,
+                                    noisy_latents.requires_grad_(train_unet),
+                                    timesteps,
+                                    caption_ids["blueMaskCaption"],
+                                    batch,
+                                    weight_dtype,
+                                )
+                            if bonusParam.greenMaskCaption:
+                                pred_noise_list["greenMaskCaption"] = self.call_unet(
+                                    args,
+                                    accelerator,
+                                    unet,
+                                    noisy_latents.requires_grad_(train_unet),
+                                    timesteps,
+                                    caption_ids["greenMaskCaption"],
+                                    batch,
+                                    weight_dtype,
+                                )
+                            if bonusParam.greenMaskCaption:
+                                pred_noise_list["antiBlueMaskCaption"] = self.call_unet(
+                                    args,
+                                    accelerator,
+                                    unet,
+                                    noisy_latents.requires_grad_(train_unet),
+                                    timesteps,
+                                    caption_ids["antiBlueMaskCaption"],
+                                    batch,
+                                    weight_dtype,
+                                )
+                            if bonusParam.antiGreenMaskCaption:
+                                pred_noise_list["antiGreenMaskCaption"] = self.call_unet(
+                                    args,
+                                    accelerator,
+                                    unet,
+                                    noisy_latents.requires_grad_(train_unet),
+                                    timesteps,
+                                    caption_ids["antiGreenMaskCaption"],
+                                    batch,
+                                    weight_dtype,
+                                )
 
                         if args.v_parameterization:
                             # v-parameterization training

@@ -137,9 +137,18 @@ IMAGE_TRANSFORMS = transforms.Compose(
 TEXT_ENCODER_OUTPUTS_CACHE_SUFFIX = "_te_outputs.npz"
 
 class BonusParams:
-    def __init__(self, unetSampling:bool = False, unetSamplingMultiplier:float = 1.0):
+    def __init__(self, unetSampling:bool = False,
+                 unetSamplingMultiplier:float = 1.0,
+                 blueMaskCaption:Optional[str] = None,
+                 antiBlueMaskCaption:Optional[str] = None,
+                 greenMaskCaption:Optional[str] = None,
+                 antiGreenMaskCaption:Optional[str] = None):
         self.unetSampling = unetSampling
         self.unetSamplingMultiplier = unetSamplingMultiplier
+        self.blueMaskCaption = blueMaskCaption
+        self.antiBlueMaskCaption = antiBlueMaskCaption
+        self.greenMaskCaption = greenMaskCaption
+        self.antiGreenMaskCaption = antiGreenMaskCaption
 
 class ImageInfo:
     def __init__(self, image_key: str, num_repeats: int, caption: str, is_reg: bool, absolute_path: str) -> None:
@@ -191,7 +200,12 @@ class ImageInfo:
 
     def scanCaptionForBonusParameters(self):
         unet_params = self.scanForParameter("unet")
-        return BonusParams(unetSampling=unet_params, unetSamplingMultiplier=unet_params)
+        blueCaption = self.scanForParameter("blue")
+        antiBlueCaption = self.scanForParameter("antiblue")
+        greenCaption = self.scanForParameter("green")
+        antiGreenCaption = self.scanForParameter("antigreen")
+
+        return BonusParams(unetSampling=unet_params, unetSamplingMultiplier=unet_params, blueCaption = blueCaption, antiBlueCaption = antiBlueCaption, greenCaption = greenCaption, antiGreenCaption = antiGreenCaption)
 
 
 
