@@ -205,7 +205,7 @@ class ImageInfo:
         greenCaption = self.scanForParameter("green")
         antiGreenCaption = self.scanForParameter("antigreen")
 
-        return BonusParams(unetSampling=unet_params, unetSamplingMultiplier=unet_params, blueCaption = blueCaption, antiBlueCaption = antiBlueCaption, greenCaption = greenCaption, antiGreenCaption = antiGreenCaption)
+        return BonusParams(unetSampling=unet_params, unetSamplingMultiplier=unet_params)#, blueCaption = blueCaption, antiBlueCaption = antiBlueCaption, greenCaption = greenCaption, antiGreenCaption = antiGreenCaption)
 
 
 
