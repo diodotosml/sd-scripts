@@ -842,7 +842,7 @@ class NetworkTrainer:
                         # TODO: Use constants instead of text
                         calculateRegCaptionLoss = not bonusParam.unetSampling and args.reg_captions and "captions_reg" in batch
                         hasRegCaption = args.reg_captions and "captions_reg" in batch
-
+                        breakpoint()
                         # get multiplier for each sample
                         if network_has_multiplier:
                             self.set_network_multiplier(batch, network, accelerator)
@@ -979,7 +979,7 @@ class NetworkTrainer:
                         loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
 
                         if args.masked_loss:
-                            loss = apply_masked_loss(loss, batch)
+                            loss = apply_masked_loss(loss, batch, args)
                         loss = loss.mean([1, 2, 3])
 
                         loss_weights = batch["loss_weights"]  # 各sampleごとのweight
@@ -1017,7 +1017,7 @@ class NetworkTrainer:
                             unet_reg_loss = unet_reg_loss.mean([1, 2, 3])
                             unet_reg_loss = unet_reg_loss * loss_weights
                             unet_reg_loss = unet_reg_loss.mean()
-                            loss = (loss + unet_reg_loss * bonusParam.unetSamplingMultiplier).mean()
+                            loss = (loss + unet_reg_loss * bonusParam.unetSamplingMultiplier)
 
                         accelerator.backward(loss)
                         if accelerator.sync_gradients:

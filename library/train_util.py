@@ -3470,6 +3470,12 @@ def add_masked_loss_arguments(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--normalize_masked_loss",
+        action="store_true",
+        help="",
+    )
+
+    parser.add_argument(
         "--conditioning_data_dir",
         type=str,
         default=None,
