@@ -842,7 +842,7 @@ class NetworkTrainer:
                         # TODO: Use constants instead of text
                         calculateRegCaptionLoss = not bonusParam.unetSampling and args.reg_captions and "captions_reg" in batch
                         hasRegCaption = args.reg_captions and "captions_reg" in batch
-                        breakpoint()
+
                         # get multiplier for each sample
                         if network_has_multiplier:
                             self.set_network_multiplier(batch, network, accelerator)

@@ -481,7 +481,7 @@ def apply_noise_offset(latents, noise, noise_offset, adaptive_noise_scale):
 
 def apply_masked_loss(loss, batch, args:object, offset: int = 0, multiplier: int = 1):
     # mask image is -1 to 1. we need to convert it to 0 to 1
-    breakpoint()
+
     mask_image = batch["conditioning_images"].to(dtype=loss.dtype)[:, 0].unsqueeze(1)  # use R channel
 
     # resize to the same size as the loss
