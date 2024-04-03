@@ -1001,7 +1001,7 @@ class NetworkTrainer:
                             extra_loss = torch.nn.functional.mse_loss(reg_noise_pred.float(), target.float(),reduction="none")
 
                             if(args.masked_two_caption_loss):
-                                extra_loss = apply_masked_loss(extra_loss, batch, 1, -1)
+                                extra_loss = apply_masked_loss(extra_loss, batch, args, 1, -1)
 
                             extra_loss = extra_loss.mean([1, 2, 3])
                             extra_loss = extra_loss * loss_weights
