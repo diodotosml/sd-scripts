@@ -988,8 +988,7 @@ class NetworkTrainer:
                         else:
                             target = noise
                         if args.reg_image_training:
-                            breakpoint()
-                            loss = torch.nn.functional.mse_loss(noisy_latents.float() - noise_pred.float(), cond_latents.float(), reduction="none")
+                            loss = torch.nn.functional.mse_loss(noise_pred.float(), cond_latents.float() - latents.float() + noise.float(), reduction="none")
                         else:
                             loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
 
