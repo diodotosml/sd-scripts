@@ -838,7 +838,7 @@ class NetworkTrainer:
                         else:
                             with torch.no_grad():
                                 # latentに変換
-                                cond_latents = vae.encode(batch["conditioning_images"].to(dtype=vae_dtype)).latent_dist.sample().to(dtype=weight_dtype)
+                                cond_latents = vae.encode(batch["conditioning_images"].to(dtype=vae_dtype)).latent_dist.sample().to(accelerator.device).to(dtype=weight_dtype)
 
                                 # NaNが含まれていれば警告を表示し0に置き換える
                                 if torch.any(torch.isnan(latents)):
