@@ -2936,6 +2936,7 @@ def get_sai_model_spec(
         clip_skip=args.clip_skip,  # None or int
         x0_prediction=x0_prediction,
         masked_two_caption_loss=args.masked_two_caption_loss,
+        reg_image_training=args.reg_image_training,
         reg_captions=args.reg_captions
     )
     return metadata
