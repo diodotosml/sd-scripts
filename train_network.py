@@ -833,12 +833,19 @@ class NetworkTrainer:
                                 # latentに変換
                                 latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample().to(
                                     dtype=weight_dtype)
+                        if "conditioning_images" in batch and batch["cond_latents"] is not None and args.reg_image_training:
+                            cond_latents = batch["cond_latents"].to(accelerator.device).to(dtype=weight_dtype)
+                        else:
+                            with torch.no_grad():
+                                # latentに変換
+                                cond_latents = vae.encode(batch["conditioning_images"].to(dtype=vae_dtype)).latent_dist.sample().to(dtype=weight_dtype)
 
                                 # NaNが含まれていれば警告を表示し0に置き換える
                                 if torch.any(torch.isnan(latents)):
                                     accelerator.print("NaN found in latents, replacing with zeros")
                                     latents = torch.nan_to_num(latents, 0, out=latents)
                         latents = latents * self.vae_scale_factor
+                        cond_latents = cond_latents * self.vae_scale_factor
                         # TODO: Use constants instead of text
                         calculateRegCaptionLoss = not bonusParam.unetSampling and args.reg_captions and "captions_reg" in batch
                         hasRegCaption = args.reg_captions and "captions_reg" in batch
@@ -879,10 +886,6 @@ class NetworkTrainer:
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(
                             args, noise_scheduler, latents
                         )
-                       # if args.reg_image_training:
-                       #     reg_image_training_noise, reg_image_training_noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(
-                       #         args, noise_scheduler, latents,timesteps
-                       #     )
 
                         # ensure the hidden state will require grad
                         if args.gradient_checkpointing:
@@ -981,7 +984,7 @@ class NetworkTrainer:
                             target = noise
                         if args.reg_image_training:
                             breakpoint()
-                            loss = torch.nn.functional.mse_loss(noisy_latents - noise_pred.float(), batch["conditioning_images"], reduction="none")
+                            loss = torch.nn.functional.mse_loss(noisy_latents - noise_pred.float(), cond_latents, reduction="none")
                         else:
                             breakpoint()
                             loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
