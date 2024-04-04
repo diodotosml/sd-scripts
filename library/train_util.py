@@ -2985,6 +2985,12 @@ def add_sd_models_arguments(parser: argparse.ArgumentParser):
         default=None,
         help="",
     )
+    parser.add_argument(
+        "--direct_noise_prediction",
+        action="store_true",
+        default=None,
+        help="",
+    )
 
     parser.add_argument(
         "--pretrained_model_name_or_path",
@@ -5052,6 +5058,7 @@ def get_my_scheduler(
         sample_sampler: str,
         v_parameterization: bool,
         x0_prediction: bool,
+        direct_noise_prediction: bool = False
 ):
     sched_init_args = {}
     if sample_sampler == "ddim":
@@ -5084,6 +5091,8 @@ def get_my_scheduler(
         sched_init_args["prediction_type"] = "v_prediction"
     if x0_prediction:
         sched_init_args["prediction_type"] = "sample"
+    if direct_noise_prediction:
+        sched_init_args["prediction_type"] = "direct"
 
     scheduler = scheduler_cls(
         num_train_timesteps=SCHEDULER_TIMESTEPS,
@@ -5227,7 +5236,8 @@ def sample_images_common(
     default_scheduler = get_my_scheduler(
         sample_sampler=args.sample_sampler,
         v_parameterization=args.v_parameterization,
-        x0_prediction=args.x0_prediction
+        x0_prediction=args.x0_prediction,
+        direct_noise_prediction=args.direct_noise_prediction
     )
 
     pipeline = pipe_class(

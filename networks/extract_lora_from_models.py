@@ -284,7 +284,12 @@ def setup_parser() -> argparse.ArgumentParser:
         default=None,
         help="",
     )
-
+    parser.add_argument(
+        "--direct_noise_prediction",
+        action="store_true",
+        default=None,
+        help="",
+    )
     parser.add_argument(
         "--sdxl", action="store_true", help="load Stable Diffusion SDXL base model / Stable Diffusion SDXL baseのモデルを読み込む"
     )
