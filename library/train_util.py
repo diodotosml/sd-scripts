@@ -4982,17 +4982,17 @@ def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timest
     if noise is None:
         noise = torch.randn_like(latents, device=latents.device)
 
-    if noise_offset is None:
-        if args.noise_offset:
-            if args.noise_offset_random_strength:
-                noise_offset = torch.rand(1, device=latents.device) * args.noise_offset
-            else:
-                noise_offset = args.noise_offset
-            noise = custom_train_functions.apply_noise_offset(latents, noise, noise_offset, args.adaptive_noise_scale)
-    if args.multires_noise_iterations:
-        noise = custom_train_functions.pyramid_noise_like(
-            noise, latents.device, args.multires_noise_iterations, args.multires_noise_discount
-        )
+        if noise_offset is None:
+            if args.noise_offset:
+                if args.noise_offset_random_strength:
+                    noise_offset = torch.rand(1, device=latents.device) * args.noise_offset
+                else:
+                    noise_offset = args.noise_offset
+                noise = custom_train_functions.apply_noise_offset(latents, noise, noise_offset, args.adaptive_noise_scale)
+        if args.multires_noise_iterations:
+            noise = custom_train_functions.pyramid_noise_like(
+                noise, latents.device, args.multires_noise_iterations, args.multires_noise_discount
+            )
 
     # Sample a random timestep for each image
     b_size = latents.shape[0]
