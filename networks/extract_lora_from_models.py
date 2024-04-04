@@ -279,6 +279,13 @@ def setup_parser() -> argparse.ArgumentParser:
         help="",
     )
     parser.add_argument(
+        "--reg_image_training",
+        action="store_true",
+        default=None,
+        help="",
+    )
+
+    parser.add_argument(
         "--sdxl", action="store_true", help="load Stable Diffusion SDXL base model / Stable Diffusion SDXL baseのモデルを読み込む"
     )
     parser.add_argument(

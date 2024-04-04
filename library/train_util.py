@@ -2956,6 +2956,13 @@ def add_sd_models_arguments(parser: argparse.ArgumentParser):
         help="",
     )
     parser.add_argument(
+        "--reg_image_training",
+        action="store_true",
+        default=None,
+        help="",
+    )
+
+    parser.add_argument(
         "--pretrained_model_name_or_path",
         type=str,
         default=None,
@@ -4927,7 +4934,7 @@ def save_sd_model_on_train_end_common(
             huggingface_util.upload(args, out_dir, "/" + model_name, force_sync_upload=True)
 
 
-def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents):
+def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timesteps = None):
     # Sample noise that we'll add to the latents
     noise = torch.randn_like(latents, device=latents.device)
     if args.noise_offset:
@@ -4945,9 +4952,11 @@ def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents):
     b_size = latents.shape[0]
     min_timestep = 0 if args.min_timestep is None else args.min_timestep
     max_timestep = noise_scheduler.config.num_train_timesteps if args.max_timestep is None else args.max_timestep
+    if not timesteps:
+        timesteps = torch.randint(min_timestep, max_timestep, (b_size,), device=latents.device)
+        timesteps = timesteps.long()
 
-    timesteps = torch.randint(min_timestep, max_timestep, (b_size,), device=latents.device)
-    timesteps = timesteps.long()
+
 
     # Add noise to the latents according to the noise magnitude at each timestep
     # (this is the forward diffusion process)

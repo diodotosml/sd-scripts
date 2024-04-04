@@ -879,6 +879,10 @@ class NetworkTrainer:
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(
                             args, noise_scheduler, latents
                         )
+                       # if args.reg_image_training:
+                       #     reg_image_training_noise, reg_image_training_noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(
+                       #         args, noise_scheduler, latents,timesteps
+                       #     )
 
                         # ensure the hidden state will require grad
                         if args.gradient_checkpointing:
@@ -967,6 +971,17 @@ class NetworkTrainer:
                                     batch,
                                     weight_dtype,
                                 )
+                            if args.reg_image_training:
+                                reg_image_noise = self.call_unet(
+                                    args,
+                                    accelerator,
+                                    unet,
+                                    reg_image_training_noisy_latents.requires_grad_(train_unet),
+                                    timesteps,
+                                    text_encoder_conds,
+                                    batch,
+                                    weight_dtype,
+                                )
 
                         if args.v_parameterization:
                             # v-parameterization training
@@ -975,8 +990,10 @@ class NetworkTrainer:
                             target = latents
                         else:
                             target = noise
-
-                        loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
+                        if args.reg_image_training:
+                            loss = torch.nn.functional.mse_loss(noisy_latents - noise_pred.float(), batch["conditioning_images"], reduction="none")
+                        else:
+                            loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
 
                         if args.masked_loss:
                             loss = apply_masked_loss(loss, batch, args)
