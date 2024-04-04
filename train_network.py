@@ -888,7 +888,7 @@ class NetworkTrainer:
                             args, noise_scheduler, latents
                         )
                         if args.reg_image_training:
-                            reg_noise, reg_noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(
+                            reg_noise, reg_noisy_latents, timesteps, noise_offset = train_util.get_noise_noisy_latents_and_timesteps(
                                 args, noise_scheduler, latents, timesteps, noise, noise_offset
                             )
 
