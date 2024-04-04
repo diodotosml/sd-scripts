@@ -1996,7 +1996,7 @@ class ControlNetDataset(BaseDataset):
                 subset.image_dir,
                 False,
                 None,
-                subset.caption_extension, 
+                subset.caption_extension,
                 subset.cache_info,
                 subset.num_repeats,
                 subset.shuffle_caption,
@@ -4936,9 +4936,9 @@ def save_sd_model_on_train_end_common(
 
 def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timesteps = None, noise = None, noise_offset = None):
     # Sample noise that we'll add to the latents
-    if not noise == None:
+    if not noise is None:
         noise = torch.randn_like(latents, device=latents.device)
-    if not noise_offset == None:
+    if not noise_offset is None:
         if args.noise_offset:
             if args.noise_offset_random_strength:
                 noise_offset = torch.rand(1, device=latents.device) * args.noise_offset
