@@ -888,7 +888,7 @@ class NetworkTrainer:
                             args, noise_scheduler, latents
                         )
                         if args.reg_image_training:
-                            reg_noise, reg_noisy_latents, timesteps, noise_offset = train_util.get_noise_noisy_latents_and_timesteps(
+                            reg_noise, reg_noisy_latents, _, _ = train_util.get_noise_noisy_latents_and_timesteps(
                                 args, noise_scheduler, latents, timesteps, noise, noise_offset
                             )
 
@@ -988,7 +988,7 @@ class NetworkTrainer:
                         else:
                             target = noise
                         if args.reg_image_training:
-                            loss = torch.nn.functional.mse_loss(noise_pred.float(), latents.float() - cond_latents.float() + noise.float(), reduction="none")
+                            loss = torch.nn.functional.mse_loss(noise_pred.float(), (latents.float() - cond_latents.float()) / 10 + noise.float(), reduction="none")
                         else:
                             loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
 
