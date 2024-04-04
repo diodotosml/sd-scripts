@@ -62,7 +62,7 @@ def train(args):
 
     # データセットを準備する
     if args.dataset_class is None:
-        blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, False, args.masked_loss, True))
+        blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, False, args.masked_loss or args.reg_image_training, True))
         if args.dataset_config is not None:
             logger.info(f"Load dataset config from {args.dataset_config}")
             user_config = config_util.load_user_config(args.dataset_config)

@@ -190,7 +190,7 @@ class NetworkTrainer:
 
         # データセットを準備する
         if args.dataset_class is None:
-            blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, args.masked_loss, True))
+            blueprint_generator = BlueprintGenerator(ConfigSanitizer(True, True, args.masked_loss or args.reg_image_training, True))
             if use_user_config:
                 logger.info(f"Loading dataset config from {args.dataset_config}")
                 user_config = config_util.load_user_config(args.dataset_config)
