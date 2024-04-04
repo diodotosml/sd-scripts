@@ -833,6 +833,11 @@ class NetworkTrainer:
                                 # latentに変換
                                 latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample().to(
                                     dtype=weight_dtype)
+
+                                if torch.any(torch.isnan(latents)):
+                                    accelerator.print("NaN found in latents, replacing with zeros")
+                                    latents = torch.nan_to_num(latents, 0, out=latents)
+                        latents = latents * self.vae_scale_factor
                         if args.reg_image_training:
                             if "cond_latents" in batch and batch["cond_latents"] is not None:
                                 cond_latents = batch["cond_latents"].to(accelerator.device).to(dtype=weight_dtype)
@@ -840,12 +845,6 @@ class NetworkTrainer:
                                 with torch.no_grad():
                                     # latentに変換
                                     cond_latents = vae.to(accelerator.device).to(dtype=weight_dtype).encode(batch["conditioning_images"].to(accelerator.device).to(dtype=weight_dtype)).latent_dist.sample().to(accelerator.device).to(dtype=weight_dtype)
-
-                                    # NaNが含まれていれば警告を表示し0に置き換える
-                                    if torch.any(torch.isnan(latents)):
-                                        accelerator.print("NaN found in latents, replacing with zeros")
-                                        latents = torch.nan_to_num(latents, 0, out=latents)
-                            latents = latents * self.vae_scale_factor
                             cond_latents = cond_latents * self.vae_scale_factor
                         # TODO: Use constants instead of text
                         calculateRegCaptionLoss = not bonusParam.unetSampling and args.reg_captions and "captions_reg" in batch
