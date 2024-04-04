@@ -971,17 +971,6 @@ class NetworkTrainer:
                                     batch,
                                     weight_dtype,
                                 )
-                            if args.reg_image_training:
-                                reg_image_noise = self.call_unet(
-                                    args,
-                                    accelerator,
-                                    unet,
-                                    reg_image_training_noisy_latents.requires_grad_(train_unet),
-                                    timesteps,
-                                    text_encoder_conds,
-                                    batch,
-                                    weight_dtype,
-                                )
 
                         if args.v_parameterization:
                             # v-parameterization training
@@ -991,8 +980,10 @@ class NetworkTrainer:
                         else:
                             target = noise
                         if args.reg_image_training:
+                            breakpoint()
                             loss = torch.nn.functional.mse_loss(noisy_latents - noise_pred.float(), batch["conditioning_images"], reduction="none")
                         else:
+                            breakpoint()
                             loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
 
                         if args.masked_loss:
