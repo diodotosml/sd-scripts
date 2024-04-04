@@ -4979,13 +4979,10 @@ def save_sd_model_on_train_end_common(
 def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timesteps=None, noise=None,
                                           noise_offset=None):
     # Sample noise that we'll add to the latents
-    if noise:
-        print()
-    else:
+    if noise is None:
         noise = torch.randn_like(latents, device=latents.device)
-    if noise_offset:
-        print()
-    else:
+
+    if noise_offset is None:
         if args.noise_offset:
             if args.noise_offset_random_strength:
                 noise_offset = torch.rand(1, device=latents.device) * args.noise_offset
