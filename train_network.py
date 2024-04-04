@@ -887,6 +887,10 @@ class NetworkTrainer:
                         noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(
                             args, noise_scheduler, latents
                         )
+                        if args.reg_image_training:
+                            reg_noise, reg_noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(
+                                args, noise_scheduler, latents, timesteps
+                            )
 
                         # ensure the hidden state will require grad
                         if args.gradient_checkpointing:
