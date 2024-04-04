@@ -833,7 +833,7 @@ class NetworkTrainer:
                                 # latentに変換
                                 latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample().to(
                                     dtype=weight_dtype)
-                        if "conditioning_images" in batch and batch["cond_latents"] is not None and args.reg_image_training:
+                        if "cond_latents" in batch and batch["cond_latents"] is not None and args.reg_image_training:
                             cond_latents = batch["cond_latents"].to(accelerator.device).to(dtype=weight_dtype)
                         else:
                             with torch.no_grad():
