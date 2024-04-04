@@ -2991,7 +2991,6 @@ def add_sd_models_arguments(parser: argparse.ArgumentParser):
         default=None,
         help="",
     )
-
     parser.add_argument(
         "--pretrained_model_name_or_path",
         type=str,
