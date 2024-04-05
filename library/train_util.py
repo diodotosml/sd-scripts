@@ -4981,9 +4981,9 @@ def save_sd_model_on_train_end_common(
             huggingface_util.upload(args, out_dir, "/" + model_name, force_sync_upload=True)
 
 
-def get_latent_from_noisy_latent(args, noise_scheduler: DDPMScheduler, noisy_latents, noise, timesteps, accelerator, weight_dtype,
+def get_latent_from_noisy_latent(args, noise_scheduler: DDPMScheduler, noisy_latents, noise, timesteps,
                                  noise_offset=None):
-    return noise_scheduler.step(noise.to(accelerator.device, dtype=weight_dtype), timesteps.to(accelerator.device, dtype=weight_dtype), noisy_latents.to(accelerator.device, dtype=weight_dtype)).pred_original_sample.to(accelerator.device, dtype=weight_dtype)
+    return noise_scheduler.step(noise, timesteps.to("cpu"), noisy_latents).pred_original_sample
 
 
 def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timesteps=None, noise=None, noise_offset=None):
