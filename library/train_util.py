@@ -4981,8 +4981,7 @@ def save_sd_model_on_train_end_common(
             huggingface_util.upload(args, out_dir, "/" + model_name, force_sync_upload=True)
 
 
-def get_latent_from_noisy_latent(args, noise_scheduler: DDPMScheduler, noisy_latents, noise, timesteps,
-                                 noise_offset=None):
+def get_latent_from_noisy_latent(noise_scheduler: DDPMScheduler, noisy_latents, noise, timesteps):
     return noise_scheduler.step(noise, timesteps.to("cpu"), noisy_latents).pred_original_sample
 
 

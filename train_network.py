@@ -990,7 +990,7 @@ class NetworkTrainer:
                         if args.direct_noise_prediction:
                             loss = torch.nn.functional.mse_loss(noise_pred.float(),  noisy_latents - latents, reduction="none")
                         elif args.reg_image_training:
-                            loss = torch.nn.functional.mse_loss(cond_latents,  train_util.get_latent_from_noisy_latent(args, noise_scheduler, noisy_latents, noise_pred, timesteps, accelerator, weight_dtype), reduction="none")
+                            loss = torch.nn.functional.mse_loss(cond_latents,  train_util.get_latent_from_noisy_latent(noise_scheduler, noisy_latents, noise_pred, timesteps), reduction="none")
                         else:
                             loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
 
