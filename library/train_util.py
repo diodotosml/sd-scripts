@@ -4982,7 +4982,7 @@ def save_sd_model_on_train_end_common(
 
 
 def get_latent_from_noisy_latent(noise_scheduler: DDPMScheduler, noisy_latents, noise, timesteps):
-    return noise_scheduler.step(noise, timesteps.to("cpu"), noisy_latents).pred_original_sample
+    return noise_scheduler.step(noise.to("cpu"), timesteps.to("cpu"), noisy_latents.to("cpu")).pred_original_sample
 
 
 def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timesteps=None, noise=None, noise_offset=None):
