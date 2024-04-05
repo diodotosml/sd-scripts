@@ -883,13 +883,13 @@ class NetworkTrainer:
 
                         # Sample noise, sample a random timestep for each image, and add noise to the latents,
                         # with noise offset and/or multires noise if specified
-                        noise, noisy_latents, timesteps, noise_offset = train_util.get_noise_noisy_latents_and_timesteps(
+                        noise, noisy_latents, timesteps, noise_offset, noise_offset_multiplier = train_util.get_noise_noisy_latents_and_timesteps(
                             args, noise_scheduler, latents
                         )
-                        if args.reg_image_training:
-                            reg_noise, reg_noisy_latents, _, _ = train_util.get_noise_noisy_latents_and_timesteps(
-                                args, noise_scheduler, latents, timesteps, noise, noise_offset
-                            )
+                       #if args.reg_image_training:
+                       #    reg_noise, reg_noisy_latents, _, _, _ = train_util.get_noise_noisy_latents_and_timesteps(
+                       #        args, noise_scheduler, latents, timesteps, noise, noise_offset
+                       #    )
 
                         # ensure the hidden state will require grad
                         if args.gradient_checkpointing:
@@ -990,7 +990,7 @@ class NetworkTrainer:
                         if args.direct_noise_prediction:
                             loss = torch.nn.functional.mse_loss(noise_pred.float(),  noisy_latents - latents, reduction="none")
                         elif args.reg_image_training:
-                            loss = torch.nn.functional.mse_loss(noise_pred.float(),  noise * 2 - reg_noise.float(), reduction="none")
+                            loss = torch.nn.functional.mse_loss(cond_latents,  train_util.get_latent_from_noisy_latent(args, noise_scheduler, noisy_latents, noise_pred, timesteps), reduction="none")
                         else:
                             loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
 

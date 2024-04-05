@@ -4981,8 +4981,12 @@ def save_sd_model_on_train_end_common(
             huggingface_util.upload(args, out_dir, "/" + model_name, force_sync_upload=True)
 
 
-def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timesteps=None, noise=None,
-                                          noise_offset=None):
+def get_latent_from_noisy_latent(args, noise_scheduler: DDPMScheduler, noisy_latents, noise, timesteps,
+                                 noise_offset=None):
+    return noise_scheduler.step(noise, timesteps, noisy_latents).pred_original_sample
+
+
+def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timesteps=None, noise=None, noise_offset=None):
     # Sample noise that we'll add to the latents
     if noise is None:
         noise = torch.randn_like(latents, device=latents.device)
@@ -4993,7 +4997,7 @@ def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timest
                     noise_offset = torch.rand(1, device=latents.device) * args.noise_offset
                 else:
                     noise_offset = args.noise_offset
-                noise = custom_train_functions.apply_noise_offset(latents, noise, noise_offset, args.adaptive_noise_scale)
+                noise, noise_offset_multiplier = custom_train_functions.apply_noise_offset(latents, noise, noise_offset, args.adaptive_noise_scale)
         if args.multires_noise_iterations:
             noise = custom_train_functions.pyramid_noise_like(
                 noise, latents.device, args.multires_noise_iterations, args.multires_noise_discount
@@ -5018,7 +5022,7 @@ def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timest
     else:
         noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
 
-    return noise, noisy_latents, timesteps, noise_offset
+    return noise, noisy_latents, timesteps, noise_offset, noise_offset_multiplier
 
 
 def append_lr_to_logs(logs, lr_scheduler, optimizer_type, including_unet=True):
