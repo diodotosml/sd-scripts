@@ -185,6 +185,7 @@ class ImageInfo:
         self.scanCaptionForGroupParameter()
         self.scanCaptionForExtradataParameter()
         self.scanCaptionForRegCaptionParameter()
+        self.scanCaptionForUnusedParameters()
 
     def scanCaptionForScaleParameter(self):
         scaleRegularExpression = re.compile("--scale\\(\\s*([+-]?\\s*\\d+(?:\\.\\d+)?)\\s*\\)")
@@ -231,6 +232,12 @@ class ImageInfo:
         if match:
             self.grouping = str(match.group(1))
             self.caption = re.sub(groupRegularExpression, "", self.caption)
+
+    def scanCaptionForUnusedParameters(self):
+        unusedExpression = re.compile("--.+?\(.+?\)")
+        match = re.search(unusedExpression, self.caption)
+        if match:
+            self.caption = re.sub(unusedExpression, "", self.caption)
 
 
 class BucketManager:
@@ -4987,6 +4994,7 @@ def get_latent_from_noisy_latent(noise_scheduler: DDPMScheduler, noisy_latents, 
 
 def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timesteps=None, noise=None, noise_offset=None):
     # Sample noise that we'll add to the latents
+    noise_offset_multiplier = 1
     if noise is None:
         noise = torch.randn_like(latents, device=latents.device)
 
