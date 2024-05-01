@@ -475,9 +475,8 @@ def apply_noise_offset(latents, noise, noise_offset, adaptive_noise_scale):
         noise_offset = noise_offset + adaptive_noise_scale * latent_mean
         noise_offset = torch.clamp(noise_offset, 0.0, None)  # in case of adaptive noise scale is negative
 
-    noise_offset_multiplier = torch.randn((latents.shape[0], latents.shape[1], 1, 1), device=latents.device)
-    noise = noise + noise_offset * noise_offset_multiplier
-    return noise, noise_offset_multiplier
+    noise = noise + noise_offset * torch.randn((latents.shape[0], latents.shape[1], 1, 1), device=latents.device)
+    return noise
 
 
 
