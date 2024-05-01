@@ -196,7 +196,7 @@ def train(args):
         accelerator.print(f"initialize U-Net with ControlNet-LLLite")
         with accelerate.init_empty_weights():
             unet_lllite = control_net_lllite_for_train.SdxlUNet2DConditionModelControlNetLLLite()
-        unet_lllite.to(accelerator.device, dtype=weight_dtype)
+        #unet_lllite.to(accelerator.device, dtype=weight_dtype)
 
         unet_sd = unet.state_dict()
         info = unet_lllite.load_lllite_weights(args.network_weights, unet_sd)
