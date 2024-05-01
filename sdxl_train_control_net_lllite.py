@@ -192,33 +192,26 @@ def train(args):
     # prepare ControlNet-LLLite
     control_net_lllite_for_train.replace_unet_linear_and_conv2d()
 
-    if args.network_weights is not None:
-        accelerator.print(f"initialize U-Net with ControlNet-LLLite")
-        with accelerate.init_empty_weights():
-            unet_lllite = control_net_lllite_for_train.SdxlUNet2DConditionModelControlNetLLLite()
-        #unet_lllite.to(accelerator.device, dtype=weight_dtype)
+    # cosumes large memory, so send to GPU before creating the LLLite model
+    accelerator.print("sending U-Net to GPU")
+    unet.to(accelerator.device, dtype=weight_dtype)
+    unet_sd = unet.state_dict()
 
-        unet_sd = unet.state_dict()
-        info = unet_lllite.load_lllite_weights(args.network_weights, unet_sd)
-        accelerator.print(f"load ControlNet-LLLite weights from {args.network_weights}: {info}")
+    # init LLLite weights
+    accelerator.print(f"initialize U-Net with ControlNet-LLLite")
+
+    if args.lowram:
+        with accelerate.init_on_device(accelerator.device):
+            unet_lllite = control_net_lllite_for_train.SdxlUNet2DConditionModelControlNetLLLite()
     else:
-        # cosumes large memory, so send to GPU before creating the LLLite model
-        accelerator.print("sending U-Net to GPU")
-        unet.to(accelerator.device, dtype=weight_dtype)
-        unet_sd = unet.state_dict()
-
-        # init LLLite weights
-        accelerator.print(f"initialize U-Net with ControlNet-LLLite")
-
-        if args.lowram:
-            with accelerate.init_on_device(accelerator.device):
-                unet_lllite = control_net_lllite_for_train.SdxlUNet2DConditionModelControlNetLLLite()
-        else:
-            unet_lllite = control_net_lllite_for_train.SdxlUNet2DConditionModelControlNetLLLite()
-        unet_lllite.to(weight_dtype)
-
+        unet_lllite = control_net_lllite_for_train.SdxlUNet2DConditionModelControlNetLLLite()
+    unet_lllite.to(weight_dtype)
+    if args.network_weights is not None:
+        info = unet_lllite.load_lllite_weights(args.network_weights, None)
+    else:
         info = unet_lllite.load_lllite_weights(None, unet_sd)
-        accelerator.print(f"init U-Net with ControlNet-LLLite weights: {info}")
+    accelerator.print(f"init U-Net with ControlNet-LLLite weights: {info}")
+
     del unet_sd, unet
 
     unet: control_net_lllite_for_train.SdxlUNet2DConditionModelControlNetLLLite = unet_lllite
