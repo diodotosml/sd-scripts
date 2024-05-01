@@ -540,6 +540,8 @@ def train(args):
                 if args.save_state:
                     train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
 
+        sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer1, text_encoder1, unet)
+
         # self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
 
         # end of epoch
@@ -558,7 +560,8 @@ def train(args):
 
         logger.info("model saved.")
 
-
+def sample_images(accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet):
+    sdxl_train_util.sample_images(accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet)
 def setup_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
 
@@ -612,7 +615,6 @@ if __name__ == "__main__":
     parser = setup_parser()
 
     args = parser.parse_args()
-    train_util.verify_command_line_training_args(args)
     args = train_util.read_config_from_file(args, parser)
 
     train(args)
