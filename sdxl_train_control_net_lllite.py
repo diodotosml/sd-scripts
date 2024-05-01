@@ -540,8 +540,17 @@ def train(args):
                 if args.save_state:
                     train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
 
-        sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, [tokenizer1, tokenizer2], [text_encoder1,text_encoder2], unet)
-
+        sdxl_train_util.sample_images(
+            accelerator,
+            args,
+            epoch + 1,
+            global_step,
+            accelerator.device,
+            vae,
+            [tokenizer1, tokenizer2],
+            [text_encoder1, text_encoder2],
+            unet,
+        )
         # self.sample_images(accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
 
         # end of epoch
@@ -559,9 +568,6 @@ def train(args):
         save_model(ckpt_name, unet, global_step, num_train_epochs, force_sync_upload=True)
 
         logger.info("model saved.")
-
-def sample_images(accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet):
-    sdxl_train_util.sample_images(accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet)
 def setup_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
 
