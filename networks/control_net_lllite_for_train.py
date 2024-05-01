@@ -339,7 +339,7 @@ class SdxlUNet2DConditionModelControlNetLLLite(sdxl_original_unet.SdxlUNet2DCond
         else:
             torch.save(state_dict, file)
 
-    def load_lllite_weights(self, file, non_lllite_unet_sd=None, test=False):
+    def load_lllite_weights(self, file, non_lllite_unet_sd=None):
         r"""
         LLLiteの重みを読み込まない（initされた値を使う）場合はfileにNoneを指定する。
         この場合、non_lllite_unet_sdにはU-Netのstate_dictを指定する。
@@ -391,7 +391,7 @@ class SdxlUNet2DConditionModelControlNetLLLite(sdxl_original_unet.SdxlUNet2DCond
             matches = pattern.findall(module_name)
             if matches is not None:
                 for m in matches:
-                    #logger.info(f"{module_name} {m}")
+                    logger.info(f"{module_name} {m}")
                     module_name = module_name.replace(m, m.replace("_", "@"))
             module_name = module_name.replace("_", ".")
             module_name = module_name.replace("@", "_")
