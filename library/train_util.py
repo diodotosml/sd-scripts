@@ -166,8 +166,7 @@ class ImageInfo:
         self.latents_flipped: torch.Tensor = None
         self.latents_npz: str = None
         self.latents_original_size: Tuple[int, int] = None  # original image size, not latents size
-        self.latents_crop_ltrb: Tuple[
-            int, int] = None  # crop left top right bottom in original pixel size, not latents size
+        self.latents_crop_ltrb: Tuple[int, int] = None  # crop left top right bottom in original pixel size, not latents size
         self.cond_img_path: str = None
         self.image: Optional[Image.Image] = None  # optional, original PIL Image
         # SDXL, optional
@@ -428,7 +427,7 @@ class AugHelper:
             else:
                 # random gamma
                 gamma = random.uniform(0.95, 1.05)
-                image = np.clip(image ** gamma, 0, 255).astype(np.uint8)
+                image = np.clip(image**gamma, 0, 255).astype(np.uint8)
 
         return {"image": image}
 
@@ -1034,8 +1033,8 @@ class BaseDataset(torch.utils.data.Dataset):
 
     def verify_bucket_reso_steps(self, min_steps: int):
         assert self.bucket_reso_steps is None or self.bucket_reso_steps % min_steps == 0, (
-                f"bucket_reso_steps is {self.bucket_reso_steps}. it must be divisible by {min_steps}.\n"
-                + f"bucket_reso_stepsが{self.bucket_reso_steps}です。{min_steps}で割り切れる必要があります"
+            f"bucket_reso_steps is {self.bucket_reso_steps}. it must be divisible by {min_steps}.\n"
+            + f"bucket_reso_stepsが{self.bucket_reso_steps}です。{min_steps}で割り切れる必要があります"
         )
 
     def is_latent_cacheable(self):
@@ -1045,10 +1044,10 @@ class BaseDataset(torch.utils.data.Dataset):
         return all(
             [
                 not (
-                        subset.caption_dropout_rate > 0
-                        or subset.shuffle_caption
-                        or subset.token_warmup_step > 0
-                        or subset.caption_tag_dropout_rate > 0
+                    subset.caption_dropout_rate > 0
+                    or subset.shuffle_caption
+                    or subset.token_warmup_step > 0
+                    or subset.caption_tag_dropout_rate > 0
                 )
                 for subset in self.subsets
             ]
@@ -1079,8 +1078,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 if not is_main_process:  # store to info only
                     continue
 
-                cache_available = is_disk_cached_latents_is_expected(info.bucket_reso, info.latents_npz,
-                                                                     subset.flip_aug)
+                cache_available = is_disk_cached_latents_is_expected(info.bucket_reso, info.latents_npz, subset.flip_aug)
 
                 if cache_available:  # do not add to batch
                     continue
@@ -1112,7 +1110,7 @@ class BaseDataset(torch.utils.data.Dataset):
     # SDXLでのみ有効だが、datasetのメソッドとする必要があるので、sdxl_train_util.pyではなくこちらに実装する
     # SD1/2に対応するにはv2のフラグを持つ必要があるので後回し
     def cache_text_encoder_outputs(
-            self, tokenizers, text_encoders, device, weight_dtype, cache_to_disk=False, is_main_process=True
+        self, tokenizers, text_encoders, device, weight_dtype, cache_to_disk=False, is_main_process=True
     ):
         assert len(tokenizers) == 2, "only support SDXL"
 
@@ -1168,8 +1166,7 @@ class BaseDataset(torch.utils.data.Dataset):
             input_ids1 = torch.stack(input_ids1, dim=0)
             input_ids2 = torch.stack(input_ids2, dim=0)
             cache_batch_text_encoder_outputs(
-                infos, tokenizers, text_encoders, self.max_token_length, cache_to_disk, input_ids1, input_ids2,
-                weight_dtype
+                infos, tokenizers, text_encoders, self.max_token_length, cache_to_disk, input_ids1, input_ids2, weight_dtype
             )
 
     def get_image_size(self, image_path):
@@ -1215,8 +1212,7 @@ class BaseDataset(torch.utils.data.Dataset):
         height, width = nh, nw
 
         # 顔を中心として448*640とかへ切り出す
-        for axis, (target_size, length, face_p) in enumerate(
-                zip((self.height, self.width), (height, width), (face_cy, face_cx))):
+        for axis, (target_size, length, face_p) in enumerate(zip((self.height, self.width), (height, width), (face_cy, face_cx))):
             p1 = face_p - target_size // 2  # 顔を中心に持ってくるための切り出し位置
 
             if subset.random_crop:
@@ -1232,9 +1228,9 @@ class BaseDataset(torch.utils.data.Dataset):
             p1 = max(0, min(p1, length - target_size))
 
             if axis == 0:
-                image = image[p1: p1 + target_size, :]
+                image = image[p1 : p1 + target_size, :]
             else:
-                image = image[:, p1: p1 + target_size]
+                image = image[:, p1 : p1 + target_size]
 
         return image
 
@@ -1542,20 +1538,20 @@ class DreamBoothDataset(BaseDataset):
     IMAGE_INFO_CACHE_FILE = "metadata_cache.json"
 
     def __init__(
-            self,
-            subsets: Sequence[DreamBoothSubset],
-            batch_size: int,
-            tokenizer,
-            max_token_length,
-            resolution,
-            network_multiplier: float,
-            enable_bucket: bool,
-            min_bucket_reso: int,
-            max_bucket_reso: int,
-            bucket_reso_steps: int,
-            bucket_no_upscale: bool,
-            prior_loss_weight: float,
-            debug_dataset: bool,
+        self,
+        subsets: Sequence[DreamBoothSubset],
+        batch_size: int,
+        tokenizer,
+        max_token_length,
+        resolution,
+        network_multiplier: float,
+        enable_bucket: bool,
+        min_bucket_reso: int,
+        max_bucket_reso: int,
+        bucket_reso_steps: int,
+        bucket_no_upscale: bool,
+        prior_loss_weight: float,
+        debug_dataset: bool,
     ) -> None:
         super().__init__(tokenizer, max_token_length, resolution, network_multiplier, debug_dataset)
 
@@ -1569,10 +1565,10 @@ class DreamBoothDataset(BaseDataset):
         self.enable_bucket = enable_bucket
         if self.enable_bucket:
             assert (
-                    min(resolution) >= min_bucket_reso
+                min(resolution) >= min_bucket_reso
             ), f"min_bucket_reso must be equal or less than resolution / min_bucket_resoは最小解像度より大きくできません。解像度を大きくするかmin_bucket_resoを小さくしてください"
             assert (
-                    max(resolution) <= max_bucket_reso
+                max(resolution) <= max_bucket_reso
             ), f"max_bucket_reso must be equal or greater than resolution / max_bucket_resoは最大解像度より小さくできません。解像度を小さくするかmin_bucket_resoを大きくしてください"
             self.min_bucket_reso = min_bucket_reso
             self.max_bucket_reso = max_bucket_reso
@@ -1644,8 +1640,7 @@ class DreamBoothDataset(BaseDataset):
 
             if use_cached_info_for_subset:
                 captions = [meta["caption"] for meta in metas.values()]
-                missing_captions = [img_path for img_path, caption in zip(img_paths, captions) if
-                                    caption is None or caption == ""]
+                missing_captions = [img_path for img_path, caption in zip(img_paths, captions) if caption is None or caption == ""]
             else:
                 # 画像ファイルごとにプロンプトを読み込み、もしあればそちらを使う
                 captions = []
@@ -1765,19 +1760,19 @@ class DreamBoothDataset(BaseDataset):
 
 class FineTuningDataset(BaseDataset):
     def __init__(
-            self,
-            subsets: Sequence[FineTuningSubset],
-            batch_size: int,
-            tokenizer,
-            max_token_length,
-            resolution,
-            network_multiplier: float,
-            enable_bucket: bool,
-            min_bucket_reso: int,
-            max_bucket_reso: int,
-            bucket_reso_steps: int,
-            bucket_no_upscale: bool,
-            debug_dataset: bool,
+        self,
+        subsets: Sequence[FineTuningSubset],
+        batch_size: int,
+        tokenizer,
+        max_token_length,
+        resolution,
+        network_multiplier: float,
+        enable_bucket: bool,
+        min_bucket_reso: int,
+        max_bucket_reso: int,
+        bucket_reso_steps: int,
+        bucket_no_upscale: bool,
+        debug_dataset: bool,
     ) -> None:
         super().__init__(tokenizer, max_token_length, resolution, network_multiplier, debug_dataset)
 
@@ -1852,8 +1847,7 @@ class FineTuningDataset(BaseDataset):
                     # add tags to each line of caption
                     if caption is not None and tags is not None:
                         caption = "\n".join(
-                            [f"{line}{subset.caption_separator}{tags}" for line in caption.split("\n") if
-                             line.strip() != ""]
+                            [f"{line}{subset.caption_separator}{tags}" for line in caption.split("\n") if line.strip() != ""]
                         )
                 else:
                     # use as is
@@ -1869,8 +1863,7 @@ class FineTuningDataset(BaseDataset):
 
                 if not subset.color_aug and not subset.random_crop:
                     # if npz exists, use them
-                    image_info.latents_npz, image_info.latents_npz_flipped = self.image_key_to_npz_file(subset,
-                                                                                                        image_key)
+                    image_info.latents_npz, image_info.latents_npz_flipped = self.image_key_to_npz_file(subset, image_key)
 
                 self.register_image(image_info, subset)
 
@@ -1934,7 +1927,7 @@ class FineTuningDataset(BaseDataset):
                 )
 
             assert (
-                    resolution is not None
+                resolution is not None
             ), "if metadata doesn't have bucket info, resolution is required / メタデータにbucket情報がない場合はresolutionを指定してください"
 
             self.enable_bucket = enable_bucket
@@ -1992,19 +1985,19 @@ class FineTuningDataset(BaseDataset):
 
 class ControlNetDataset(BaseDataset):
     def __init__(
-            self,
-            subsets: Sequence[ControlNetSubset],
-            batch_size: int,
-            tokenizer,
-            max_token_length,
-            resolution,
-            network_multiplier: float,
-            enable_bucket: bool,
-            min_bucket_reso: int,
-            max_bucket_reso: int,
-            bucket_reso_steps: int,
-            bucket_no_upscale: bool,
-            debug_dataset: float,
+        self,
+        subsets: Sequence[ControlNetSubset],
+        batch_size: int,
+        tokenizer,
+        max_token_length,
+        resolution,
+        network_multiplier: float,
+        enable_bucket: bool,
+        min_bucket_reso: int,
+        max_bucket_reso: int,
+        bucket_reso_steps: int,
+        bucket_no_upscale: bool,
+        debug_dataset: float,
     ) -> None:
         super().__init__(tokenizer, max_token_length, resolution, network_multiplier, debug_dataset)
 
@@ -2017,7 +2010,7 @@ class ControlNetDataset(BaseDataset):
                 subset.image_dir,
                 False,
                 None,
-                subset.caption_extension,
+                subset.caption_extension, 
                 subset.cache_info,
                 subset.num_repeats,
                 subset.shuffle_caption,
@@ -2087,8 +2080,7 @@ class ControlNetDataset(BaseDataset):
             ctrl_img_path = os.path.abspath(ctrl_img_path)  # normalize path
 
             info.cond_img_path = ctrl_img_path
-            cond_imgs_with_pair.add(
-                os.path.splitext(ctrl_img_path)[0])  # remove extension because Windows is case insensitive
+            cond_imgs_with_pair.add(os.path.splitext(ctrl_img_path)[0])  # remove extension because Windows is case insensitive
 
         extra_imgs = []
         for subset in subsets:
@@ -2097,10 +2089,10 @@ class ControlNetDataset(BaseDataset):
             extra_imgs.extend([p for p in conditioning_img_paths if os.path.splitext(p)[0] not in cond_imgs_with_pair])
 
         assert (
-                len(missing_imgs) == 0
+            len(missing_imgs) == 0
         ), f"missing conditioning data for {len(missing_imgs)} images / 制御用画像が見つかりませんでした: {missing_imgs}"
         assert (
-                len(extra_imgs) == 0
+            len(extra_imgs) == 0
         ), f"extra conditioning data for {len(extra_imgs)} images / 余分な制御用画像があります: {extra_imgs}"
 
         self.conditioning_image_transforms = IMAGE_TRANSFORMS
@@ -2127,7 +2119,7 @@ class ControlNetDataset(BaseDataset):
 
         conditioning_images = []
 
-        for i, image_key in enumerate(bucket[image_index: image_index + bucket_batch_size]):
+        for i, image_key in enumerate(bucket[image_index : image_index + bucket_batch_size]):
             image_info = self.dreambooth_dataset_delegate.image_data[image_key]
 
             target_size_hw = example["target_sizes_hw"][i]
@@ -2138,7 +2130,7 @@ class ControlNetDataset(BaseDataset):
 
             if self.dreambooth_dataset_delegate.enable_bucket:
                 assert (
-                        cond_img.shape[0] == original_size_hw[0] and cond_img.shape[1] == original_size_hw[1]
+                    cond_img.shape[0] == original_size_hw[0] and cond_img.shape[1] == original_size_hw[1]
                 ), f"size of conditioning image is not match / 画像サイズが合いません: {image_info.absolute_path}"
                 cond_img = cv2.resize(
                     cond_img, image_info.resized_size, interpolation=cv2.INTER_AREA
@@ -2149,7 +2141,7 @@ class ControlNetDataset(BaseDataset):
                 h, w = target_size_hw
                 ct = (cond_img.shape[0] - h) // 2
                 cl = (cond_img.shape[1] - w) // 2
-                cond_img = cond_img[ct: ct + h, cl: cl + w]
+                cond_img = cond_img[ct : ct + h, cl : cl + w]
             else:
                 # assert (
                 #     cond_img.shape[0] == self.height and cond_img.shape[1] == self.width
@@ -2166,8 +2158,7 @@ class ControlNetDataset(BaseDataset):
             cond_img = self.conditioning_image_transforms(cond_img)
             conditioning_images.append(cond_img)
 
-        example["conditioning_images"] = torch.stack(conditioning_images).to(
-            memory_format=torch.contiguous_format).float()
+        example["conditioning_images"] = torch.stack(conditioning_images).to(memory_format=torch.contiguous_format).float()
 
         return example
 
@@ -2209,12 +2200,11 @@ class DatasetGroup(torch.utils.data.ConcatDataset):
             dataset.cache_latents(vae, vae_batch_size, cache_to_disk, is_main_process)
 
     def cache_text_encoder_outputs(
-            self, tokenizers, text_encoders, device, weight_dtype, cache_to_disk=False, is_main_process=True
+        self, tokenizers, text_encoders, device, weight_dtype, cache_to_disk=False, is_main_process=True
     ):
         for i, dataset in enumerate(self.datasets):
             logger.info(f"[Dataset {i}]")
-            dataset.cache_text_encoder_outputs(tokenizers, text_encoders, device, weight_dtype, cache_to_disk,
-                                               is_main_process)
+            dataset.cache_text_encoder_outputs(tokenizers, text_encoders, device, weight_dtype, cache_to_disk, is_main_process)
 
     def set_caching_mode(self, caching_mode):
         for dataset in self.datasets:
@@ -2270,7 +2260,7 @@ def is_disk_cached_latents_is_expected(reso, npz_path: str, flip_aug: bool):
 
 # 戻り値は、latents_tensor, (original_size width, original_size height), (crop left, crop top)
 def load_latents_from_disk(
-        npz_path,
+    npz_path,
 ) -> Tuple[Optional[torch.Tensor], Optional[List[int]], Optional[List[int]], Optional[torch.Tensor]]:
     npz = np.load(npz_path)
     if "latents" not in npz:
@@ -2321,25 +2311,23 @@ def debug_dataset(train_dataset, show_input_ids=False):
             if example["latents"] is not None:
                 logger.info(f"sample has latents from npz file: {example['latents'].size()}")
             for j, (ik, cap, lw, iid, orgsz, crptl, trgsz, flpdz) in enumerate(
-                    zip(
-                        example["image_keys"],
-                        example["captions"],
-                        example["captions_reg"],
-                        example["loss_weights"],
-                        example["input_ids"],
-                        example["original_sizes_hw"],
-                        example["crop_top_lefts"],
-                        example["target_sizes_hw"],
-                        example["flippeds"],
-                    )
+                zip(
+                    example["image_keys"],
+                    example["captions"],
+                    example["loss_weights"],
+                    example["input_ids"],
+                    example["original_sizes_hw"],
+                    example["crop_top_lefts"],
+                    example["target_sizes_hw"],
+                    example["flippeds"],
+                )
             ):
                 logger.info(
                     f'{ik}, size: {train_dataset.image_data[ik].image_size}, loss weight: {lw}, caption: "{cap}", original size: {orgsz}, crop top left: {crptl}, target size: {trgsz}, flipped: {flpdz}'
                 )
                 if "network_multipliers" in example:
                     print(f"network multiplier: {example['network_multipliers'][j]}")
-                if "grouping" in example:
-                    print(f"Grouping: {example['grouping'][j]}")
+
                 if show_input_ids:
                     logger.info(f"input ids: {iid}")
                     if "input_ids2" in example:
@@ -2473,8 +2461,7 @@ def load_arbitrary_dataset(args, tokenizer) -> MinimalDataset:
     dataset_class = args.dataset_class.split(".")[-1]
     module = importlib.import_module(module)
     dataset_class = getattr(module, dataset_class)
-    train_dataset_group: MinimalDataset = dataset_class(tokenizer, args.max_token_length, args.resolution,
-                                                        args.debug_dataset)
+    train_dataset_group: MinimalDataset = dataset_class(tokenizer, args.max_token_length, args.resolution, args.debug_dataset)
     return train_dataset_group
 
 
@@ -3399,6 +3386,27 @@ def add_training_arguments(parser: argparse.ArgumentParser, support_dreambooth: 
         default=None,
         help="set maximum time step for U-Net training (1~1000, default is 1000) / U-Net学習時のtime stepの最大値を設定する（1~1000で指定、省略時はデフォルト値(1000)）",
     )
+    parser.add_argument(
+        "--loss_type",
+        type=str,
+        default="l2",
+        choices=["l2", "huber", "smooth_l1"],
+        help="The type of loss function to use (L2, Huber, or smooth L1), default is L2 / 使用する損失関数の種類（L2、Huber、またはsmooth L1）、デフォルトはL2",
+    )
+    parser.add_argument(
+        "--huber_schedule",
+        type=str,
+        default="snr",
+        choices=["constant", "exponential", "snr"],
+        help="The scheduling method for Huber loss (constant, exponential, or SNR-based). Only used when loss_type is 'huber' or 'smooth_l1'. default is snr"
+        + " / Huber損失のスケジューリング方法（constant、exponential、またはSNRベース）。loss_typeが'huber'または'smooth_l1'の場合に有効、デフォルトは snr",
+    )
+    parser.add_argument(
+        "--huber_c",
+        type=float,
+        default=0.1,
+        help="The huber loss parameter. Only used if one of the huber loss modes (huber or smooth l1) is selected with loss_type. default is 0.1 / Huber損失のパラメータ。loss_typeがhuberまたはsmooth l1の場合に有効。デフォルトは0.1",
+    )
 
     parser.add_argument(
         "--lowram",
@@ -3531,11 +3539,15 @@ def add_masked_loss_arguments(parser: argparse.ArgumentParser):
 
 def add_masked_two_caption_loss_arguments(parser: argparse.ArgumentParser):
     parser.add_argument(
+        "--masked_loss",
+        action="store_true",
+        help="apply mask for calculating loss. conditioning_data_dir is required for dataset. / 損失計算時にマスクを適用する。datasetにはconditioning_data_dirが必要",
+    )
+    parser.add_argument(
         "--masked_two_caption_loss",
         action="store_true",
         help="apply mask for calculating loss. conditioning_data_dir is required for dataset. / 損失計算時にマスクを適用する。datasetにはconditioning_data_dirが必要",
     )
-
 
 def add_reg_caption_loss_arguments(parser: argparse.ArgumentParser):
     parser.add_argument(
@@ -4989,10 +5001,39 @@ def save_sd_model_on_train_end_common(
 def get_latent_from_noisy_latent(noise_scheduler: DDPMScheduler, noisy_latents, noise, timesteps):
     return noise_scheduler.step(noise.to("cpu"), timesteps.to("cpu"), noisy_latents.to("cpu")).pred_original_sample
 
+def get_timesteps_and_huber_c(args, min_timestep, max_timestep, noise_scheduler, b_size, device):
+
+    # TODO: if a huber loss is selected, it will use constant timesteps for each batch
+    # as. In the future there may be a smarter way
+
+    if args.loss_type == "huber" or args.loss_type == "smooth_l1":
+        timesteps = torch.randint(min_timestep, max_timestep, (1,), device="cpu")
+        timestep = timesteps.item()
+
+        if args.huber_schedule == "exponential":
+            alpha = -math.log(args.huber_c) / noise_scheduler.config.num_train_timesteps
+            huber_c = math.exp(-alpha * timestep)
+        elif args.huber_schedule == "snr":
+            alphas_cumprod = noise_scheduler.alphas_cumprod[timestep]
+            sigmas = ((1.0 - alphas_cumprod) / alphas_cumprod) ** 0.5
+            huber_c = (1 - args.huber_c) / (1 + sigmas) ** 2 + args.huber_c
+        elif args.huber_schedule == "constant":
+            huber_c = args.huber_c
+        else:
+            raise NotImplementedError(f"Unknown Huber loss schedule {args.huber_schedule}!")
+
+        timesteps = timesteps.repeat(b_size).to(device)
+    elif args.loss_type == "l2":
+        timesteps = torch.randint(min_timestep, max_timestep, (b_size,), device=device)
+        huber_c = 1  # may be anything, as it's not used
+    else:
+        raise NotImplementedError(f"Unknown loss type {args.loss_type}")
+    timesteps = timesteps.long()
+
+    return timesteps, huber_c
 
 def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timesteps=None, noise=None, noise_offset=None):
     # Sample noise that we'll add to the latents
-    noise_offset_multiplier = 1
     if noise is None:
         noise = torch.randn_like(latents, device=latents.device)
 
@@ -5002,7 +5043,7 @@ def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timest
                     noise_offset = torch.rand(1, device=latents.device) * args.noise_offset
                 else:
                     noise_offset = args.noise_offset
-                noise, noise_offset_multiplier = custom_train_functions.apply_noise_offset(latents, noise, noise_offset, args.adaptive_noise_scale)
+                noise = custom_train_functions.apply_noise_offset(latents, noise, noise_offset, args.adaptive_noise_scale)
         if args.multires_noise_iterations:
             noise = custom_train_functions.pyramid_noise_like(
                 noise, latents.device, args.multires_noise_iterations, args.multires_noise_discount
@@ -5012,9 +5053,12 @@ def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timest
     b_size = latents.shape[0]
     min_timestep = 0 if args.min_timestep is None else args.min_timestep
     max_timestep = noise_scheduler.config.num_train_timesteps if args.max_timestep is None else args.max_timestep
+
+
+    new_timesteps, huber_c = get_timesteps_and_huber_c(args, min_timestep, max_timestep, noise_scheduler, b_size, latents.device)
+
     if not timesteps:
-        timesteps = torch.randint(min_timestep, max_timestep, (b_size,), device=latents.device)
-        timesteps = timesteps.long()
+        timesteps = new_timesteps
 
     # Add noise to the latents according to the noise magnitude at each timestep
     # (this is the forward diffusion process)
@@ -5027,7 +5071,31 @@ def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timest
     else:
         noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
 
-    return noise, noisy_latents, timesteps, noise_offset, noise_offset_multiplier
+
+    return noise, noisy_latents, timesteps, huber_c, noise_offset
+
+# NOTE: if you're using the scheduled version, huber_c has to depend on the timesteps already
+def conditional_loss(
+    model_pred: torch.Tensor, target: torch.Tensor, reduction: str = "mean", loss_type: str = "l2", huber_c: float = 0.1
+):
+
+    if loss_type == "l2":
+        loss = torch.nn.functional.mse_loss(model_pred, target, reduction=reduction)
+    elif loss_type == "huber":
+        loss = 2 * huber_c * (torch.sqrt((model_pred - target) ** 2 + huber_c**2) - huber_c)
+        if reduction == "mean":
+            loss = torch.mean(loss)
+        elif reduction == "sum":
+            loss = torch.sum(loss)
+    elif loss_type == "smooth_l1":
+        loss = 2 * (torch.sqrt((model_pred - target) ** 2 + huber_c**2) - huber_c)
+        if reduction == "mean":
+            loss = torch.mean(loss)
+        elif reduction == "sum":
+            loss = torch.sum(loss)
+    else:
+        raise NotImplementedError(f"Unsupported Loss Type {loss_type}")
+    return loss
 
 
 def append_lr_to_logs(logs, lr_scheduler, optimizer_type, including_unet=True):

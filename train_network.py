@@ -505,6 +505,31 @@ class NetworkTrainer:
         if args.full_fp16:
             train_util.patch_accelerator_for_fp16_training(accelerator)
 
+        # before resuming make hook for saving/loading to save/load the network weights only
+        def save_model_hook(models, weights, output_dir):
+            # pop weights of other models than network to save only network weights
+            if accelerator.is_main_process:
+                remove_indices = []
+                for i, model in enumerate(models):
+                    if not isinstance(model, type(accelerator.unwrap_model(network))):
+                        remove_indices.append(i)
+                for i in reversed(remove_indices):
+                    weights.pop(i)
+                # print(f"save model hook: {len(weights)} weights will be saved")
+
+        def load_model_hook(models, input_dir):
+            # remove models except network
+            remove_indices = []
+            for i, model in enumerate(models):
+                if not isinstance(model, type(accelerator.unwrap_model(network))):
+                    remove_indices.append(i)
+            for i in reversed(remove_indices):
+                models.pop(i)
+            # print(f"load model hook: {len(models)} models will be loaded")
+
+        accelerator.register_save_state_pre_hook(save_model_hook)
+        accelerator.register_load_state_pre_hook(load_model_hook)
+
         # resumeする
         train_util.resume_from_local_or_hf_if_specified(accelerator, args)
 
@@ -578,6 +603,11 @@ class NetworkTrainer:
             "ss_scale_weight_norms": args.scale_weight_norms,
             "ss_ip_noise_gamma": args.ip_noise_gamma,
             "ss_debiased_estimation": bool(args.debiased_estimation_loss),
+            "ss_noise_offset_random_strength": args.noise_offset_random_strength,
+            "ss_ip_noise_gamma_random_strength": args.ip_noise_gamma_random_strength,
+            "ss_loss_type": args.loss_type,
+            "ss_huber_schedule": args.huber_schedule,
+            "ss_huber_c": args.huber_c,
         }
 
         if use_user_config:
@@ -883,7 +913,7 @@ class NetworkTrainer:
 
                         # Sample noise, sample a random timestep for each image, and add noise to the latents,
                         # with noise offset and/or multires noise if specified
-                        noise, noisy_latents, timesteps, noise_offset, noise_offset_multiplier = train_util.get_noise_noisy_latents_and_timesteps(
+                        noise, noisy_latents, timesteps,huber_c, noise_offset, noise_offset_multiplier = train_util.get_noise_noisy_latents_and_timesteps(
                             args, noise_scheduler, latents
                         )
                        #if args.reg_image_training:
@@ -988,11 +1018,11 @@ class NetworkTrainer:
                             target = noise
 
                         if args.direct_noise_prediction:
-                            loss = torch.nn.functional.mse_loss(noise_pred.float(),  noisy_latents - latents, reduction="none")
+                            loss = train_util.conditional_loss(noise_pred.float(),  noisy_latents - latents, reduction="none", loss_type=args.loss_type, huber_c=huber_c )
                         elif args.reg_image_training:
-                            loss = torch.nn.functional.mse_loss(cond_latents + noise, noise_pred + train_util.get_latent_from_noisy_latent(noise_scheduler, noisy_latents, noise_pred, timesteps).to(accelerator.device, dtype=weight_dtype), reduction="none")
+                            loss = train_util.conditional_loss(cond_latents + noise, noise_pred + train_util.get_latent_from_noisy_latent(noise_scheduler, noisy_latents, noise_pred, timesteps).to(accelerator.device, dtype=weight_dtype), reduction="none", loss_type=args.loss_type, huber_c=huber_c )
                         else:
-                            loss = torch.nn.functional.mse_loss(noise_pred.float(), target.float(), reduction="none")
+                            loss = train_util.conditional_loss( noise_pred.float(), target.float(), reduction="none", loss_type=args.loss_type, huber_c=huber_c )
 
                         if args.masked_loss:
                             loss = apply_masked_loss(loss, batch, args)
@@ -1262,6 +1292,7 @@ if __name__ == "__main__":
     parser = setup_parser()
 
     args = parser.parse_args()
+    train_util.verify_command_line_training_args(args)
     args = train_util.read_config_from_file(args, parser)
 
     trainer = NetworkTrainer()
