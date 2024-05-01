@@ -913,7 +913,7 @@ class NetworkTrainer:
 
                         # Sample noise, sample a random timestep for each image, and add noise to the latents,
                         # with noise offset and/or multires noise if specified
-                        noise, noisy_latents, timesteps,huber_c, noise_offset, noise_offset_multiplier = train_util.get_noise_noisy_latents_and_timesteps(
+                        noise, noisy_latents, timesteps,huber_c, noise_offset = train_util.get_noise_noisy_latents_and_timesteps(
                             args, noise_scheduler, latents
                         )
                        #if args.reg_image_training:
