@@ -206,6 +206,7 @@ def train(args):
                 unet_lllite = control_net_lllite_for_train.SdxlUNet2DConditionModelControlNetLLLite()
         else:
             unet_lllite = control_net_lllite_for_train.SdxlUNet2DConditionModelControlNetLLLite()
+        unet_lllite.to(weight_dtype)
 
         info = unet_lllite.load_lllite_weights(args.network_weights, unet_sd)
         accelerator.print(f"load ControlNet-LLLite weights from {args.network_weights}: {info}")
