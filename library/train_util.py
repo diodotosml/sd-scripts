@@ -216,7 +216,7 @@ class ImageInfo:
         antiGreenCaption = self.scanForParameter("antigreen")
         startEpoch = self.scanForParameter("startEpoch", "0")
         midEpoch = self.scanForParameter("midEpoch")
-        endEpoch = self.scanForParameter("startEpoch")
+        endEpoch = self.scanForParameter("endEpoch")
 
         return BonusParams(unetSampling=unet_params,
                            unetSamplingMultiplier=unet_params,
