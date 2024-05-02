@@ -397,14 +397,17 @@ def train(args):
                 if epoch < bonusParams.startEpoch:
                     if bonusParams.midEpoch is not None and epoch > bonusParams.midEpoch:
                         if(random.randint(1,2) == 1):
-                            skippedSteps += 1
+                            if(epoch == 0):
+                                loss_recorder.add(epoch=epoch, step=step, loss=0)
                             continue
                     else:
-                        skippedSteps += 1
+                        if (epoch == 0):
+                            loss_recorder.add(epoch=epoch, step=step, loss=0)
                         continue
 
                 if bonusParams.endEpoch is not None and epoch > bonusParams.endEpoch:
-                    skippedSteps += 1
+                    if (epoch == 0):
+                        loss_recorder.add(epoch=epoch, step=step, loss=0)
                     continue
 
 
@@ -523,7 +526,7 @@ def train(args):
                             remove_model(remove_ckpt_name)
 
             current_loss = loss.detach().item()
-            loss_recorder.add(epoch=epoch, step=step - skippedSteps, loss=current_loss)
+            loss_recorder.add(epoch=epoch, step=step, loss=current_loss)
             avr_loss: float = loss_recorder.moving_average
             logs = {"avr_loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
             progress_bar.set_postfix(**logs)
