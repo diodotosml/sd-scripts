@@ -418,6 +418,7 @@ def train(args):
                 print(epoch)
                 print(bonusParams.startEpoch)
                 print(epoch < bonusParams.startEpoch)
+                print(shouldNotSkip)
                 print("THIS SHOULD NOT SHOW")
 
                 with accelerator.accumulate(unet):
