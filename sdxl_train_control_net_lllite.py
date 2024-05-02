@@ -408,7 +408,7 @@ def train(args):
                 if (epoch == 0):
                     loss_recorder.add(epoch=epoch, step=step, loss=0)
                 continue
-
+            print("THIS SHOULD NOT SHOW")
             with accelerator.accumulate(unet):
                 with torch.no_grad():
                     if "latents" in batch and batch["latents"] is not None:
