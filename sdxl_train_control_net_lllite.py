@@ -394,12 +394,7 @@ def train(args):
             bonusParams: train_util.BonusParams = batch["bonus_params"]
             shouldNotSkip = True
             if epoch < bonusParams.startEpoch:
-                print("SOON SKIPPING")
-
                 if bonusParams.midEpoch is not None and epoch > bonusParams.midEpoch:
-                    breakpoint()
-                    print("MID EPOCH")
-                    print(bonusParams.midEpoch)
                     if (random.randint(1, 2) == 1):
                         if (epoch == 0):
                             loss_recorder.add(epoch=epoch, step=step, loss=0)
@@ -407,7 +402,6 @@ def train(args):
                 else:
                     if (epoch == 0):
                         loss_recorder.add(epoch=epoch, step=step, loss=0)
-                    print("SKIPPING")
                     shouldNotSkip = False
 
             if bonusParams.endEpoch is not None and epoch > bonusParams.endEpoch:
@@ -418,12 +412,6 @@ def train(args):
 
 
             if(shouldNotSkip):
-                print(epoch)
-                print(bonusParams.startEpoch)
-                print(epoch < bonusParams.startEpoch)
-                print(shouldNotSkip)
-                print("THIS SHOULD NOT SHOW")
-
                 with accelerator.accumulate(unet):
                     with torch.no_grad():
                         if "latents" in batch and batch["latents"] is not None:

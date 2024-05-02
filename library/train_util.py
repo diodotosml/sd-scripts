@@ -155,7 +155,7 @@ class BonusParams:
         self.greenMaskCaption = greenMaskCaption
         self.antiGreenMaskCaption = antiGreenMaskCaption
         self.startEpoch = 0 if (startEpoch is None) else int(startEpoch)
-        self.midEpoch = 0 if (midEpoch is None) else int(midEpoch)
+        self.midEpoch = None if (midEpoch is None) else int(midEpoch)
         self.endEpoch = None if (endEpoch is None) else int(endEpoch)
 
 
