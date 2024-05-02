@@ -400,17 +400,17 @@ def train(args):
                     if (random.randint(1, 2) == 1):
                         if (epoch == 0):
                             loss_recorder.add(epoch=epoch, step=step, loss=0)
-                        shouldNotSkip = True
+                        shouldNotSkip = False
                 else:
                     if (epoch == 0):
                         loss_recorder.add(epoch=epoch, step=step, loss=0)
                     print("SKIPPING")
-                    shouldNotSkip = True
+                    shouldNotSkip = False
 
             if bonusParams.endEpoch is not None and epoch > bonusParams.endEpoch:
                 if (epoch == 0):
                     loss_recorder.add(epoch=epoch, step=step, loss=0)
-                shouldNotSkip = True
+                shouldNotSkip = False
 
 
 
