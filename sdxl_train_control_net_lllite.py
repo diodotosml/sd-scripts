@@ -392,7 +392,9 @@ def train(args):
         for step, batch in enumerate(train_dataloader):
             current_step.value = global_step
             with accelerator.accumulate(unet):
-                bonusParams: train_util.BonusParams = batch["bonus_params"][0]
+                breakpoint()
+                bonusParams: train_util.BonusParams = batch["bonus_params"]
+
                 if epoch < bonusParams.startEpoch:
                     if bonusParams.midEpoch is not None and epoch > bonusParams.midEpoch:
                         if(random.randint(1,2) == 1):
