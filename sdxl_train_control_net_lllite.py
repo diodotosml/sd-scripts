@@ -397,6 +397,7 @@ def train(args):
                 print("SOON SKIPPING")
 
                 if bonusParams.midEpoch is not None and epoch > bonusParams.midEpoch:
+                    breakpoint()
                     print("MID EPOCH")
                     print(bonusParams.midEpoch)
                     if (random.randint(1, 2) == 1):
