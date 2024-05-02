@@ -397,6 +397,8 @@ def train(args):
                 print("SOON SKIPPING")
 
                 if bonusParams.midEpoch is not None and epoch > bonusParams.midEpoch:
+                    print("MID EPOCH")
+                    print(bonusParams.midEpoch)
                     if (random.randint(1, 2) == 1):
                         if (epoch == 0):
                             loss_recorder.add(epoch=epoch, step=step, loss=0)
