@@ -383,7 +383,7 @@ def train(args):
         if os.path.exists(old_ckpt_file):
             accelerator.print(f"removing old checkpoint: {old_ckpt_file}")
             os.remove(old_ckpt_file)
-
+    skippedSteps = 0
     # training loop
     for epoch in range(num_train_epochs):
         accelerator.print(f"\nepoch {epoch+1}/{num_train_epochs}")
@@ -397,11 +397,14 @@ def train(args):
                 if epoch < bonusParams.startEpoch:
                     if bonusParams.midEpoch is not None and epoch > bonusParams.midEpoch:
                         if(random.randint(1,2) == 1):
+                            skippedSteps += 1
                             continue
                     else:
+                        skippedSteps += 1
                         continue
 
                 if bonusParams.endEpoch is not None and epoch > bonusParams.endEpoch:
+                    skippedSteps += 1
                     continue
 
 
@@ -520,7 +523,7 @@ def train(args):
                             remove_model(remove_ckpt_name)
 
             current_loss = loss.detach().item()
-            loss_recorder.add(epoch=epoch, step=step, loss=current_loss)
+            loss_recorder.add(epoch=epoch, step=step - skippedSteps, loss=current_loss)
             avr_loss: float = loss_recorder.moving_average
             logs = {"avr_loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
             progress_bar.set_postfix(**logs)
