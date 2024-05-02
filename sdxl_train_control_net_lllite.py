@@ -392,7 +392,7 @@ def train(args):
         for step, batch in enumerate(train_dataloader):
             current_step.value = global_step
             bonusParams: train_util.BonusParams = batch["bonus_params"]
-
+            shouldNotSkip = True
             if epoch < bonusParams.startEpoch:
                 print("SOON SKIPPING")
 
@@ -400,147 +400,152 @@ def train(args):
                     if (random.randint(1, 2) == 1):
                         if (epoch == 0):
                             loss_recorder.add(epoch=epoch, step=step, loss=0)
-                        continue
+                        shouldNotSkip = True
                 else:
                     if (epoch == 0):
                         loss_recorder.add(epoch=epoch, step=step, loss=0)
                     print("SKIPPING")
-                    continue
+                    shouldNotSkip = True
 
             if bonusParams.endEpoch is not None and epoch > bonusParams.endEpoch:
                 if (epoch == 0):
                     loss_recorder.add(epoch=epoch, step=step, loss=0)
-                continue
-            print(epoch)
-            print(bonusParams.startEpoch)
-            print("THIS SHOULD NOT SHOW")
-            with accelerator.accumulate(unet):
-                with torch.no_grad():
-                    if "latents" in batch and batch["latents"] is not None:
-                        latents = batch["latents"].to(accelerator.device).to(dtype=weight_dtype)
-                    else:
-                        # latentに変換
-                        latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample().to(dtype=weight_dtype)
+                shouldNotSkip = True
 
-                        # NaNが含まれていれば警告を表示し0に置き換える
-                        if torch.any(torch.isnan(latents)):
-                            accelerator.print("NaN found in latents, replacing with zeros")
-                            latents = torch.nan_to_num(latents, 0, out=latents)
-                    latents = latents * sdxl_model_util.VAE_SCALE_FACTOR
 
-                if "text_encoder_outputs1_list" not in batch or batch["text_encoder_outputs1_list"] is None:
-                    input_ids1 = batch["input_ids"]
-                    input_ids2 = batch["input_ids2"]
+
+            if(shouldNotSkip):
+                print(epoch)
+                print(bonusParams.startEpoch)
+                print("THIS SHOULD NOT SHOW")
+
+                with accelerator.accumulate(unet):
                     with torch.no_grad():
-                        # Get the text embedding for conditioning
-                        input_ids1 = input_ids1.to(accelerator.device)
-                        input_ids2 = input_ids2.to(accelerator.device)
-                        encoder_hidden_states1, encoder_hidden_states2, pool2 = train_util.get_hidden_states_sdxl(
-                            args.max_token_length,
-                            input_ids1,
-                            input_ids2,
-                            tokenizer1,
-                            tokenizer2,
-                            text_encoder1,
-                            text_encoder2,
-                            None if not args.full_fp16 else weight_dtype,
-                        )
-                else:
-                    encoder_hidden_states1 = batch["text_encoder_outputs1_list"].to(accelerator.device).to(weight_dtype)
-                    encoder_hidden_states2 = batch["text_encoder_outputs2_list"].to(accelerator.device).to(weight_dtype)
-                    pool2 = batch["text_encoder_pool2_list"].to(accelerator.device).to(weight_dtype)
+                        if "latents" in batch and batch["latents"] is not None:
+                            latents = batch["latents"].to(accelerator.device).to(dtype=weight_dtype)
+                        else:
+                            # latentに変換
+                            latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample().to(dtype=weight_dtype)
 
-                # get size embeddings
-                orig_size = batch["original_sizes_hw"]
-                crop_size = batch["crop_top_lefts"]
-                target_size = batch["target_sizes_hw"]
-                embs = sdxl_train_util.get_size_embeddings(orig_size, crop_size, target_size, accelerator.device).to(weight_dtype)
+                            # NaNが含まれていれば警告を表示し0に置き換える
+                            if torch.any(torch.isnan(latents)):
+                                accelerator.print("NaN found in latents, replacing with zeros")
+                                latents = torch.nan_to_num(latents, 0, out=latents)
+                        latents = latents * sdxl_model_util.VAE_SCALE_FACTOR
 
-                # concat embeddings
-                vector_embedding = torch.cat([pool2, embs], dim=1).to(weight_dtype)
-                text_embedding = torch.cat([encoder_hidden_states1, encoder_hidden_states2], dim=2).to(weight_dtype)
+                    if "text_encoder_outputs1_list" not in batch or batch["text_encoder_outputs1_list"] is None:
+                        input_ids1 = batch["input_ids"]
+                        input_ids2 = batch["input_ids2"]
+                        with torch.no_grad():
+                            # Get the text embedding for conditioning
+                            input_ids1 = input_ids1.to(accelerator.device)
+                            input_ids2 = input_ids2.to(accelerator.device)
+                            encoder_hidden_states1, encoder_hidden_states2, pool2 = train_util.get_hidden_states_sdxl(
+                                args.max_token_length,
+                                input_ids1,
+                                input_ids2,
+                                tokenizer1,
+                                tokenizer2,
+                                text_encoder1,
+                                text_encoder2,
+                                None if not args.full_fp16 else weight_dtype,
+                            )
+                    else:
+                        encoder_hidden_states1 = batch["text_encoder_outputs1_list"].to(accelerator.device).to(weight_dtype)
+                        encoder_hidden_states2 = batch["text_encoder_outputs2_list"].to(accelerator.device).to(weight_dtype)
+                        pool2 = batch["text_encoder_pool2_list"].to(accelerator.device).to(weight_dtype)
 
-                # Sample noise, sample a random timestep for each image, and add noise to the latents,
-                # with noise offset and/or multires noise if specified
-                noise, noisy_latents, timesteps, huber_c = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
+                    # get size embeddings
+                    orig_size = batch["original_sizes_hw"]
+                    crop_size = batch["crop_top_lefts"]
+                    target_size = batch["target_sizes_hw"]
+                    embs = sdxl_train_util.get_size_embeddings(orig_size, crop_size, target_size, accelerator.device).to(weight_dtype)
 
-                noisy_latents = noisy_latents.to(weight_dtype)  # TODO check why noisy_latents is not weight_dtype
+                    # concat embeddings
+                    vector_embedding = torch.cat([pool2, embs], dim=1).to(weight_dtype)
+                    text_embedding = torch.cat([encoder_hidden_states1, encoder_hidden_states2], dim=2).to(weight_dtype)
 
-                controlnet_image = batch["conditioning_images"].to(dtype=weight_dtype)
+                    # Sample noise, sample a random timestep for each image, and add noise to the latents,
+                    # with noise offset and/or multires noise if specified
+                    noise, noisy_latents, timesteps, huber_c = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
 
-                with accelerator.autocast():
-                    # conditioning imageをControlNetに渡す / pass conditioning image to ControlNet
-                    # 内部でcond_embに変換される / it will be converted to cond_emb inside
+                    noisy_latents = noisy_latents.to(weight_dtype)  # TODO check why noisy_latents is not weight_dtype
 
-                    # それらの値を使いつつ、U-Netでノイズを予測する / predict noise with U-Net using those values
-                    noise_pred = unet(noisy_latents, timesteps, text_embedding, vector_embedding, controlnet_image)
+                    controlnet_image = batch["conditioning_images"].to(dtype=weight_dtype)
 
-                if args.v_parameterization:
-                    # v-parameterization training
-                    target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                else:
-                    target = noise
+                    with accelerator.autocast():
+                        # conditioning imageをControlNetに渡す / pass conditioning image to ControlNet
+                        # 内部でcond_embに変換される / it will be converted to cond_emb inside
 
-                loss = train_util.conditional_loss(noise_pred.float(), target.float(), reduction="none", loss_type=args.loss_type, huber_c=huber_c)
-                loss = loss.mean([1, 2, 3])
+                        # それらの値を使いつつ、U-Netでノイズを予測する / predict noise with U-Net using those values
+                        noise_pred = unet(noisy_latents, timesteps, text_embedding, vector_embedding, controlnet_image)
 
-                loss_weights = batch["loss_weights"]  # 各sampleごとのweight
-                loss = loss * loss_weights
+                    if args.v_parameterization:
+                        # v-parameterization training
+                        target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                    else:
+                        target = noise
 
-                if args.min_snr_gamma:
-                    loss = apply_snr_weight(loss, timesteps, noise_scheduler, args.min_snr_gamma, args.v_parameterization)
-                if args.scale_v_pred_loss_like_noise_pred:
-                    loss = scale_v_prediction_loss_like_noise_prediction(loss, timesteps, noise_scheduler)
-                if args.v_pred_like_loss:
-                    loss = add_v_prediction_like_loss(loss, timesteps, noise_scheduler, args.v_pred_like_loss)
-                if args.debiased_estimation_loss:
-                    loss = apply_debiased_estimation(loss, timesteps, noise_scheduler)
+                    loss = train_util.conditional_loss(noise_pred.float(), target.float(), reduction="none", loss_type=args.loss_type, huber_c=huber_c)
+                    loss = loss.mean([1, 2, 3])
 
-                loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
+                    loss_weights = batch["loss_weights"]  # 各sampleごとのweight
+                    loss = loss * loss_weights
 
-                accelerator.backward(loss)
-                if accelerator.sync_gradients and args.max_grad_norm != 0.0:
-                    params_to_clip = unet.get_trainable_params()
-                    accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
+                    if args.min_snr_gamma:
+                        loss = apply_snr_weight(loss, timesteps, noise_scheduler, args.min_snr_gamma, args.v_parameterization)
+                    if args.scale_v_pred_loss_like_noise_pred:
+                        loss = scale_v_prediction_loss_like_noise_prediction(loss, timesteps, noise_scheduler)
+                    if args.v_pred_like_loss:
+                        loss = add_v_prediction_like_loss(loss, timesteps, noise_scheduler, args.v_pred_like_loss)
+                    if args.debiased_estimation_loss:
+                        loss = apply_debiased_estimation(loss, timesteps, noise_scheduler)
 
-                optimizer.step()
-                lr_scheduler.step()
-                optimizer.zero_grad(set_to_none=True)
+                    loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
 
-            # Checks if the accelerator has performed an optimization step behind the scenes
-            if accelerator.sync_gradients:
-                progress_bar.update(1)
-                global_step += 1
+                    accelerator.backward(loss)
+                    if accelerator.sync_gradients and args.max_grad_norm != 0.0:
+                        params_to_clip = unet.get_trainable_params()
+                        accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
 
-                # sdxl_train_util.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
+                    optimizer.step()
+                    lr_scheduler.step()
+                    optimizer.zero_grad(set_to_none=True)
 
-                # 指定ステップごとにモデルを保存
-                if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
-                    accelerator.wait_for_everyone()
-                    if accelerator.is_main_process:
-                        ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
-                        save_model(ckpt_name, accelerator.unwrap_model(unet), global_step, epoch)
+                # Checks if the accelerator has performed an optimization step behind the scenes
+                if accelerator.sync_gradients:
+                    progress_bar.update(1)
+                    global_step += 1
 
-                        if args.save_state:
-                            train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
+                    # sdxl_train_util.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
 
-                        remove_step_no = train_util.get_remove_step_no(args, global_step)
-                        if remove_step_no is not None:
-                            remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, remove_step_no)
-                            remove_model(remove_ckpt_name)
+                    # 指定ステップごとにモデルを保存
+                    if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
+                        accelerator.wait_for_everyone()
+                        if accelerator.is_main_process:
+                            ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
+                            save_model(ckpt_name, accelerator.unwrap_model(unet), global_step, epoch)
 
-            current_loss = loss.detach().item()
-            loss_recorder.add(epoch=epoch, step=step, loss=current_loss)
-            avr_loss: float = loss_recorder.moving_average
-            logs = {"avr_loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
-            progress_bar.set_postfix(**logs)
+                            if args.save_state:
+                                train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
 
-            if args.logging_dir is not None:
-                logs = generate_step_logs(args, current_loss, avr_loss, lr_scheduler)
-                accelerator.log(logs, step=global_step)
+                            remove_step_no = train_util.get_remove_step_no(args, global_step)
+                            if remove_step_no is not None:
+                                remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, remove_step_no)
+                                remove_model(remove_ckpt_name)
 
-            if global_step >= args.max_train_steps:
-                break
+                current_loss = loss.detach().item()
+                loss_recorder.add(epoch=epoch, step=step, loss=current_loss)
+                avr_loss: float = loss_recorder.moving_average
+                logs = {"avr_loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
+                progress_bar.set_postfix(**logs)
+
+                if args.logging_dir is not None:
+                    logs = generate_step_logs(args, current_loss, avr_loss, lr_scheduler)
+                    accelerator.log(logs, step=global_step)
+
+                if global_step >= args.max_train_steps:
+                    break
 
         if args.logging_dir is not None:
             logs = {"loss/epoch": loss_recorder.moving_average}
