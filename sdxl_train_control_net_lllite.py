@@ -394,6 +394,8 @@ def train(args):
             bonusParams: train_util.BonusParams = batch["bonus_params"]
 
             if epoch < bonusParams.startEpoch:
+                print("SOON SKIPPING")
+
                 if bonusParams.midEpoch is not None and epoch > bonusParams.midEpoch:
                     if (random.randint(1, 2) == 1):
                         if (epoch == 0):
@@ -402,12 +404,14 @@ def train(args):
                 else:
                     if (epoch == 0):
                         loss_recorder.add(epoch=epoch, step=step, loss=0)
+                    print("SKIPPING")
                     continue
 
             if bonusParams.endEpoch is not None and epoch > bonusParams.endEpoch:
                 if (epoch == 0):
                     loss_recorder.add(epoch=epoch, step=step, loss=0)
                 continue
+
             print("THIS SHOULD NOT SHOW")
             with accelerator.accumulate(unet):
                 with torch.no_grad():
