@@ -5085,7 +5085,7 @@ def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents, timest
         noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
 
 
-    return noise, noisy_latents, timesteps, huber_c, noise_offset
+    return noise, noisy_latents, timesteps, huber_c
 
 # NOTE: if you're using the scheduled version, huber_c has to depend on the timesteps already
 def conditional_loss(
