@@ -392,6 +392,18 @@ def train(args):
         for step, batch in enumerate(train_dataloader):
             current_step.value = global_step
             with accelerator.accumulate(unet):
+                bonusParams: train_util.BonusParams = batch["bonus_params"]
+                if epoch < bonusParams.startEpoch:
+                    if bonusParams.midEpoch is not None and epoch > bonusParams.midEpoch:
+                        if(random.randint(1,2) == 1):
+                            continue
+                    else:
+                        continue
+
+                if bonusParams.endEpoch is not None and epoch > bonusParams.endEpoch:
+                    continue
+
+
                 with torch.no_grad():
                     if "latents" in batch and batch["latents"] is not None:
                         latents = batch["latents"].to(accelerator.device).to(dtype=weight_dtype)

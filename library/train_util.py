@@ -143,13 +143,20 @@ class BonusParams:
                  blueMaskCaption: Optional[str] = None,
                  antiBlueMaskCaption: Optional[str] = None,
                  greenMaskCaption: Optional[str] = None,
-                 antiGreenMaskCaption: Optional[str] = None):
+                 antiGreenMaskCaption: Optional[str] = None,
+                 startEpoch: Optional[str] = None,
+                 endEpoch:Optional[str] = None,
+                 midEpoch:Optional[str] = None,
+                 ):
         self.unetSampling = unetSampling
         self.unetSamplingMultiplier = unetSamplingMultiplier
         self.blueMaskCaption = blueMaskCaption
         self.antiBlueMaskCaption = antiBlueMaskCaption
         self.greenMaskCaption = greenMaskCaption
         self.antiGreenMaskCaption = antiGreenMaskCaption
+        self.startEpoch = 0 if (startEpoch is None) else int(startEpoch)
+        self.midEpoch = 0 if (midEpoch is None) else int(midEpoch)
+        self.endEpoch = None if (endEpoch is None) else int(endEpoch)
 
 
 class ImageInfo:
@@ -193,13 +200,13 @@ class ImageInfo:
             self.network_scale = float(match.group(1))
             self.caption = re.sub(scaleRegularExpression, "", self.caption)
 
-    def scanForParameter(self, parameter: str):
+    def scanForParameter(self, parameter: str, default:str = None):
         regularExpression = re.compile(f'--{parameter}\\(\\s*([+-]?\\s*\\d+(?:\\.\\d+)?)\\s*\\)')
         match = re.search(regularExpression, self.caption)
         if match:
             self.caption = re.sub(regularExpression, "", self.caption)
             return float(match.group(1))
-        return None
+        return default
 
     def scanCaptionForBonusParameters(self):
         unet_params = self.scanForParameter("unet")
@@ -207,9 +214,15 @@ class ImageInfo:
         antiBlueCaption = self.scanForParameter("antiblue")
         greenCaption = self.scanForParameter("green")
         antiGreenCaption = self.scanForParameter("antigreen")
+        startEpoch = self.scanForParameter("startEpoch", "0")
+        midEpoch = self.scanForParameter("midEpoch")
+        endEpoch = self.scanForParameter("startEpoch")
 
         return BonusParams(unetSampling=unet_params,
-                           unetSamplingMultiplier=unet_params)  # , blueCaption = blueCaption, antiBlueCaption = antiBlueCaption, greenCaption = greenCaption, antiGreenCaption = antiGreenCaption)
+                           unetSamplingMultiplier=unet_params,
+                           startEpoch=startEpoch,
+                           midEpoch=midEpoch,
+                           endEpoch=endEpoch)  # , blueCaption = blueCaption, antiBlueCaption = antiBlueCaption, greenCaption = greenCaption, antiGreenCaption = antiGreenCaption)
 
     def scanCaptionForExtradataParameter(self):
         extraRegularExpression = re.compile("--extra\((.+?)\)")
