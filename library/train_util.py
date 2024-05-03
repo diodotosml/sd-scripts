@@ -3552,11 +3552,6 @@ def add_masked_loss_arguments(parser: argparse.ArgumentParser):
 
 def add_masked_two_caption_loss_arguments(parser: argparse.ArgumentParser):
     parser.add_argument(
-        "--masked_loss",
-        action="store_true",
-        help="apply mask for calculating loss. conditioning_data_dir is required for dataset. / 損失計算時にマスクを適用する。datasetにはconditioning_data_dirが必要",
-    )
-    parser.add_argument(
         "--masked_two_caption_loss",
         action="store_true",
         help="apply mask for calculating loss. conditioning_data_dir is required for dataset. / 損失計算時にマスクを適用する。datasetにはconditioning_data_dirが必要",
