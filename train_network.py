@@ -1147,7 +1147,7 @@ class NetworkTrainer:
 
 
                         if global_step >= args.max_train_steps:
-                        break
+                            break
 
             if args.logging_dir is not None:
                 logs = {"loss/epoch": loss_recorder.moving_average}
