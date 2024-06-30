@@ -958,313 +958,265 @@ class NetworkTrainer:
                 with accelerator.accumulate(training_model):
                     on_step_start(text_encoder, unet)
 
-
-            groups = group_by_element(listOfBatches, key_func= lambda x: x[1]["grouping"][0])
-
-            for batches in groups.values():
-                for step, batch in batches:
-                    bonusParam: train_util.BonusParams = batch["bonus_params"]
-
-                    shouldNotSkip = True
-                    if epoch < bonusParam.startEpoch:
-                        if bonusParam.midEpoch is not None and epoch > bonusParam.midEpoch:
-                            if (random.randint(1, 2) == 1):
-                                if (epoch == 0):
-                                    loss_recorder.add(epoch=epoch, step=step, loss=0)
-                                shouldNotSkip = False
+                bonusParam: train_util.BonusParams = batch["bonus_params"]
+                shouldNotSkip = True
+                # if epoch < bonusParam.startEpoch:
+                #     if bonusParam.midEpoch is not None and epoch > bonusParam.midEpoch:
+                #         if (random.randint(1, 2) == 1):
+                #             if (epoch == 0):
+                #                 loss_recorder.add(epoch=epoch, step=step, loss=0)
+                #             shouldNotSkip = False
+                #     else:
+                #         if (epoch == 0):
+                #             loss_recorder.add(epoch=epoch, step=step, loss=0)
+                #         shouldNotSkip = False
+                #
+                # if bonusParam.endEpoch is not None and epoch > bonusParam.endEpoch:
+                #     if (epoch == 0):
+                #         loss_recorder.add(epoch=epoch, step=step, loss=0)
+                #     shouldNotSkip = False
+                if (shouldNotSkip):
+                    current_step.value = global_step
+                    with accelerator.accumulate(network):
+                        on_step_start(text_encoder, unet)
+                        if "latents" in batch and batch["latents"] is not None:
+                            latents = batch["latents"].to(accelerator.device).to(dtype=weight_dtype)
                         else:
-                            if (epoch == 0):
-                                loss_recorder.add(epoch=epoch, step=step, loss=0)
-                            shouldNotSkip = False
-
-                    if bonusParam.endEpoch is not None and epoch > bonusParam.endEpoch:
-                        if (epoch == 0):
-                            loss_recorder.add(epoch=epoch, step=step, loss=0)
-                        shouldNotSkip = False
-
-                    if (shouldNotSkip):
-
-                        current_step.value = global_step
-                        with accelerator.accumulate(network):
-                            on_step_start(text_encoder, unet)
-
-                            if "latents" in batch and batch["latents"] is not None:
-                                latents = batch["latents"].to(accelerator.device).to(dtype=weight_dtype)
+                            with torch.no_grad():
+                                # latentに変換
+                                latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample().to(
+                                    dtype=weight_dtype)
+                                if torch.any(torch.isnan(latents)):
+                                    accelerator.print("NaN found in latents, replacing with zeros")
+                                    latents = torch.nan_to_num(latents, 0, out=latents)
+                        latents = latents * self.vae_scale_factor
+                        if args.reg_image_training:
+                            if "cond_latents" in batch and batch["cond_latents"] is not None:
+                                cond_latents = batch["cond_latents"].to(accelerator.device).to(dtype=weight_dtype)
                             else:
                                 with torch.no_grad():
                                     # latentに変換
-                                    latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample().to(
-                                        dtype=weight_dtype)
-
-                                    if torch.any(torch.isnan(latents)):
-                                        accelerator.print("NaN found in latents, replacing with zeros")
-                                        latents = torch.nan_to_num(latents, 0, out=latents)
-                            latents = latents * self.vae_scale_factor
-                            if args.reg_image_training:
-                                if "cond_latents" in batch and batch["cond_latents"] is not None:
-                                    cond_latents = batch["cond_latents"].to(accelerator.device).to(dtype=weight_dtype)
-                                else:
-                                    with torch.no_grad():
-                                        # latentに変換
-                                        cond_latents = vae.to(accelerator.device).to(dtype=weight_dtype).encode(batch["conditioning_images"].to(accelerator.device).to(dtype=weight_dtype)).latent_dist.sample().to(accelerator.device).to(dtype=weight_dtype)
-                                cond_latents = cond_latents * self.vae_scale_factor
-                            # TODO: Use constants instead of text
-                            calculateRegCaptionLoss = not bonusParam.unetSampling and args.reg_captions and "captions_reg" in batch
-                            hasRegCaption = args.reg_captions and "captions_reg" in batch
-
-                            # get multiplier for each sample
-                            if network_has_multiplier:
-                                self.set_network_multiplier(batch, network, accelerator)
-
-                            with torch.set_grad_enabled(train_text_encoder), accelerator.autocast():
-                                # Get the text embedding for conditioning
-                                if args.weighted_captions:
-                                    text_encoder_conds = get_weighted_text_embeddings(
-                                        tokenizer,
-                                        text_encoder,
-                                        batch["captions"],
-                                        accelerator.device,
-                                        args.max_token_length // 75 if args.max_token_length else 1,
-                                        clip_skip=args.clip_skip,
-                                    )
-                                else:
-
-                                    text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
-
-                                    if hasRegCaption:
-                                        reg_text_encoder_conds = self.generate_caption_ids(tokenizers, batch["captions_reg"], text_encoders, accelerator, args, weight_dtype)  #.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
-                                    if bonusParam.blueMaskCaption and "blueMaskCaption" not in caption_ids:
-                                        caption_ids["blueMaskCaption"] = self.generate_caption_ids(tokenizers, bonusParam.blueMaskCaption, text_encoders, accelerator, args, weight_dtype)
-                                    if bonusParam.greenMaskCaption and "greenMaskCaption" not in caption_ids:
-                                        caption_ids["greenMaskCaption"] = self.generate_caption_ids(tokenizers, bonusParam.greenMaskCaption, text_encoders, accelerator, args, weight_dtype)
-                                    if bonusParam.antiBlueMaskCaption and "antiBlueMaskCaption" not in caption_ids:
-                                        caption_ids["antiBlueMaskCaption"] = self.generate_caption_ids(tokenizers, bonusParam.antiBlueMaskCaption, text_encoders, accelerator, args, weight_dtype)
-                                    if bonusParam.antiGreenMaskCaption and "antiGreenMaskCaption" not in caption_ids:
-                                        caption_ids["antiGreenMaskCaption"] = self.generate_caption_ids(tokenizers, bonusParam.antiGreenMaskCaption, text_encoders, accelerator, args, weight_dtype)
-
-
-                            # Sample noise, sample a random timestep for each image, and add noise to the latents,
-                            # with noise offset and/or multires noise if specified
-                            noise, noisy_latents, timesteps,huber_c = train_util.get_noise_noisy_latents_and_timesteps(
-                                args, noise_scheduler, latents
+                                    cond_latents = vae.to(accelerator.device).to(dtype=weight_dtype).encode(batch["conditioning_images"].to(accelerator.device).to(dtype=weight_dtype)).latent_dist.sample().to(accelerator.device).to(dtype=weight_dtype)
+                            cond_latents = cond_latents * self.vae_scale_factor
+                        # TODO: Use constants instead of text
+                        calculateRegCaptionLoss = not bonusParam.unetSampling and args.reg_captions and "captions_reg" in batch
+                        hasRegCaption = args.reg_captions and "captions_reg" in batch
+                        # get multiplier for each sample
+                        if network_has_multiplier:
+                            self.set_network_multiplier(batch, network, accelerator)
+                        with torch.set_grad_enabled(train_text_encoder), accelerator.autocast():
+                            # Get the text embedding for conditioning
+                            if args.weighted_captions:
+                                text_encoder_conds = get_weighted_text_embeddings(
+                                    tokenizer,
+                                    text_encoder,
+                                    batch["captions"],
+                                    accelerator.device,
+                                    args.max_token_length // 75 if args.max_token_length else 1,
+                                    clip_skip=args.clip_skip,
+                                )
+                            else:
+                                text_encoder_conds = self.get_text_cond(args, accelerator, batch, tokenizers, text_encoders, weight_dtype)
+                                if hasRegCaption:
+                                    reg_text_encoder_conds = self.generate_caption_ids(tokenizers, batch["captions_reg"], text_encoders, accelerator, args, weight_dtype)  #.get_text_cond(args, accelerator, extra, tokenizers, text_encoders, weight_dtype)
+                                if bonusParam.blueMaskCaption and "blueMaskCaption" not in caption_ids:
+                                    caption_ids["blueMaskCaption"] = self.generate_caption_ids(tokenizers, bonusParam.blueMaskCaption, text_encoders, accelerator, args, weight_dtype)
+                                if bonusParam.greenMaskCaption and "greenMaskCaption" not in caption_ids:
+                                    caption_ids["greenMaskCaption"] = self.generate_caption_ids(tokenizers, bonusParam.greenMaskCaption, text_encoders, accelerator, args, weight_dtype)
+                                if bonusParam.antiBlueMaskCaption and "antiBlueMaskCaption" not in caption_ids:
+                                    caption_ids["antiBlueMaskCaption"] = self.generate_caption_ids(tokenizers, bonusParam.antiBlueMaskCaption, text_encoders, accelerator, args, weight_dtype)
+                                if bonusParam.antiGreenMaskCaption and "antiGreenMaskCaption" not in caption_ids:
+                                    caption_ids["antiGreenMaskCaption"] = self.generate_caption_ids(tokenizers, bonusParam.antiGreenMaskCaption, text_encoders, accelerator, args, weight_dtype)
+                        # Sample noise, sample a random timestep for each image, and add noise to the latents,
+                        # with noise offset and/or multires noise if specified
+                        noise, noisy_latents, timesteps,huber_c = train_util.get_noise_noisy_latents_and_timesteps(
+                            args, noise_scheduler, latents
+                        )
+                       #if args.reg_image_training:
+                       #    reg_noise, reg_noisy_latents, _, _, _ = train_util.get_noise_noisy_latents_and_timesteps(
+                       #        args, noise_scheduler, latents, timesteps, noise, noise_offset
+                       #    )
+                        # ensure the hidden state will require grad
+                        if args.gradient_checkpointing:
+                            for x in noisy_latents:
+                                x.requires_grad_(True)
+                            for t in text_encoder_conds:
+                                t.requires_grad_(True)
+                        # Predict the noise residual
+                        with accelerator.autocast():
+                            noise_pred = self.call_unet(
+                                args,
+                                accelerator,
+                                unet,
+                                noisy_latents.requires_grad_(train_unet),
+                                timesteps,
+                                text_encoder_conds,
+                                batch,
+                                weight_dtype,
                             )
-                           #if args.reg_image_training:
-                           #    reg_noise, reg_noisy_latents, _, _, _ = train_util.get_noise_noisy_latents_and_timesteps(
-                           #        args, noise_scheduler, latents, timesteps, noise, noise_offset
-                           #    )
-
-                            # ensure the hidden state will require grad
-                            if args.gradient_checkpointing:
-                                for x in noisy_latents:
-                                    x.requires_grad_(True)
-                                for t in text_encoder_conds:
-                                    t.requires_grad_(True)
-
-                            # Predict the noise residual
-                            with accelerator.autocast():
-                                noise_pred = self.call_unet(
+                            if calculateRegCaptionLoss:
+                                reg_noise_pred = self.call_unet(
                                     args,
                                     accelerator,
                                     unet,
                                     noisy_latents.requires_grad_(train_unet),
                                     timesteps,
-                                    text_encoder_conds,
+                                    reg_text_encoder_conds,
                                     batch,
                                     weight_dtype,
                                 )
-                                if calculateRegCaptionLoss:
-                                    reg_noise_pred = self.call_unet(
-                                        args,
-                                        accelerator,
-                                        unet,
-                                        noisy_latents.requires_grad_(train_unet),
-                                        timesteps,
-                                        reg_text_encoder_conds,
-                                        batch,
-                                        weight_dtype,
-                                    )
-                                if bonusParam.unetSampling:
-                                    self.set_network_multiplier(batch, network, accelerator, 0)
-                                    unet_reg_noise_pred = self.call_unet(
-                                        args,
-                                        accelerator,
-                                        unet,
-                                        noisy_latents.requires_grad_(train_unet),
-                                        timesteps,
-                                        reg_text_encoder_conds,
-                                        batch,
-                                        weight_dtype,
-                                    )
-                                    self.set_network_multiplier(batch, network, accelerator)
-                                if bonusParam.blueMaskCaption:
-                                    pred_noise_list["blueMaskCaption"] = self.call_unet(
-                                        args,
-                                        accelerator,
-                                        unet,
-                                        noisy_latents.requires_grad_(train_unet),
-                                        timesteps,
-                                        caption_ids["blueMaskCaption"],
-                                        batch,
-                                        weight_dtype,
-                                    )
-                                if bonusParam.greenMaskCaption:
-                                    pred_noise_list["greenMaskCaption"] = self.call_unet(
-                                        args,
-                                        accelerator,
-                                        unet,
-                                        noisy_latents.requires_grad_(train_unet),
-                                        timesteps,
-                                        caption_ids["greenMaskCaption"],
-                                        batch,
-                                        weight_dtype,
-                                    )
-                                if bonusParam.greenMaskCaption:
-                                    pred_noise_list["antiBlueMaskCaption"] = self.call_unet(
-                                        args,
-                                        accelerator,
-                                        unet,
-                                        noisy_latents.requires_grad_(train_unet),
-                                        timesteps,
-                                        caption_ids["antiBlueMaskCaption"],
-                                        batch,
-                                        weight_dtype,
-                                    )
-                                if bonusParam.antiGreenMaskCaption:
-                                    pred_noise_list["antiGreenMaskCaption"] = self.call_unet(
-                                        args,
-                                        accelerator,
-                                        unet,
-                                        noisy_latents.requires_grad_(train_unet),
-                                        timesteps,
-                                        caption_ids["antiGreenMaskCaption"],
-                                        batch,
-                                        weight_dtype,
-                                    )
-
-                            if args.v_parameterization:
-                                # v-parameterization training
-                                target = noise_scheduler.get_velocity(latents, noise, timesteps)
-                            elif args.x0_prediction:
-                                target = latents
-                            else:
-                                target = noise
-
-                            if args.direct_noise_prediction:
-                                loss = train_util.conditional_loss(noise_pred.float(),  noisy_latents - latents, reduction="none", loss_type=args.loss_type, huber_c=huber_c )
-                            elif args.reg_image_training:
-                                loss = train_util.conditional_loss(cond_latents + noise, noise_pred + train_util.get_latent_from_noisy_latent(noise_scheduler, noisy_latents, noise_pred, timesteps).to(accelerator.device, dtype=weight_dtype), reduction="none", loss_type=args.loss_type, huber_c=huber_c )
-                            else:
-                                loss = train_util.conditional_loss( noise_pred.float(), target.float(), reduction="none", loss_type=args.loss_type, huber_c=huber_c )
-
-
-                            if args.masked_loss or ("alpha_masks" in batch and batch["alpha_masks"] is not None):
-                                loss = apply_masked_loss(loss, batch, args)
-                            loss = loss.mean([1, 2, 3])
-
-                            loss_weights = batch["loss_weights"]  # 各sampleごとのweight
-                            loss = loss * loss_weights
-
-                            if args.min_snr_gamma:
-                                loss = apply_snr_weight(loss, timesteps, noise_scheduler, args.min_snr_gamma, args.v_parameterization)
-                            if args.scale_v_pred_loss_like_noise_pred:
-                                loss = scale_v_prediction_loss_like_noise_prediction(loss, timesteps, noise_scheduler)
-                            if args.v_pred_like_loss:
-                                loss = add_v_prediction_like_loss(loss, timesteps, noise_scheduler, args.v_pred_like_loss)
-                            if args.debiased_estimation_loss:
-                                loss = apply_debiased_estimation(loss, timesteps, noise_scheduler)
-
-                            loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
-
-                            if calculateRegCaptionLoss:
-                                print("Applying reg caption loss")
-                                extra_loss = torch.nn.functional.mse_loss(reg_noise_pred.float(), target.float(),reduction="none")
-
-                                if(args.masked_two_caption_loss):
-                                    extra_loss = apply_masked_loss(extra_loss, batch, args, 1, -1)
-
-                                extra_loss = extra_loss.mean([1, 2, 3])
-                                extra_loss = extra_loss * loss_weights
-                                extra_loss = extra_loss.mean()
-                                loss = (loss + extra_loss).mean()
-
-
-                            # Calculate UnetSamplingRegLoss
                             if bonusParam.unetSampling:
-                                print("unetsampling")
-                                unet_reg_loss = torch.nn.functional.mse_loss(noise_pred.float(), unet_reg_noise_pred.float() ,reduction="none")
-
-                                unet_reg_loss = unet_reg_loss.mean([1, 2, 3])
-                                unet_reg_loss = unet_reg_loss * loss_weights
-                                unet_reg_loss = unet_reg_loss.mean()
-                                loss = (loss + unet_reg_loss * bonusParam.unetSamplingMultiplier)
-
-                            accelerator.backward(loss)
-                            if accelerator.sync_gradients:
-                                self.all_reduce_network(accelerator, network)  # sync DDP grad manually
-                                if args.max_grad_norm != 0.0:
-                                    params_to_clip = accelerator.unwrap_model(network).get_trainable_params()
-                                    accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
-
-                            optimizer.step()
-                            lr_scheduler.step()
-                            optimizer.zero_grad(set_to_none=True)
-####################    ########################
-
-
-                        if args.scale_weight_norms:
-                            keys_scaled, mean_norm, maximum_norm = accelerator.unwrap_model(network).apply_max_norm_regularization(
-                                args.scale_weight_norms, accelerator.device
-                            )
-                            max_mean_logs = {"Keys Scaled": keys_scaled, "Average key norm": mean_norm}
+                                self.set_network_multiplier(batch, network, accelerator, 0)
+                                unet_reg_noise_pred = self.call_unet(
+                                    args,
+                                    accelerator,
+                                    unet,
+                                    noisy_latents.requires_grad_(train_unet),
+                                    timesteps,
+                                    reg_text_encoder_conds,
+                                    batch,
+                                    weight_dtype,
+                                )
+                                self.set_network_multiplier(batch, network, accelerator)
+                            if bonusParam.blueMaskCaption:
+                                pred_noise_list["blueMaskCaption"] = self.call_unet(
+                                    args,
+                                    accelerator,
+                                    unet,
+                                    noisy_latents.requires_grad_(train_unet),
+                                    timesteps,
+                                    caption_ids["blueMaskCaption"],
+                                    batch,
+                                    weight_dtype,
+                                )
+                            if bonusParam.greenMaskCaption:
+                                pred_noise_list["greenMaskCaption"] = self.call_unet(
+                                    args,
+                                    accelerator,
+                                    unet,
+                                    noisy_latents.requires_grad_(train_unet),
+                                    timesteps,
+                                    caption_ids["greenMaskCaption"],
+                                    batch,
+                                    weight_dtype,
+                                )
+                            if bonusParam.greenMaskCaption:
+                                pred_noise_list["antiBlueMaskCaption"] = self.call_unet(
+                                    args,
+                                    accelerator,
+                                    unet,
+                                    noisy_latents.requires_grad_(train_unet),
+                                    timesteps,
+                                    caption_ids["antiBlueMaskCaption"],
+                                    batch,
+                                    weight_dtype,
+                                )
+                            if bonusParam.antiGreenMaskCaption:
+                                pred_noise_list["antiGreenMaskCaption"] = self.call_unet(
+                                    args,
+                                    accelerator,
+                                    unet,
+                                    noisy_latents.requires_grad_(train_unet),
+                                    timesteps,
+                                    caption_ids["antiGreenMaskCaption"],
+                                    batch,
+                                    weight_dtype,
+                                )
+                        if args.v_parameterization:
+                            # v-parameterization training
+                            target = noise_scheduler.get_velocity(latents, noise, timesteps)
+                        elif args.x0_prediction:
+                            target = latents
                         else:
-                            keys_scaled, mean_norm, maximum_norm = None, None, None
-
-                        # Checks if the accelerator has performed an optimization step behind the scenes
+                            target = noise
+                        if args.direct_noise_prediction:
+                            loss = train_util.conditional_loss(noise_pred.float(),  noisy_latents - latents, reduction="none", loss_type=args.loss_type, huber_c=huber_c )
+                        elif args.reg_image_training:
+                            loss = train_util.conditional_loss(cond_latents + noise, noise_pred + train_util.get_latent_from_noisy_latent(noise_scheduler, noisy_latents, noise_pred, timesteps).to(accelerator.device, dtype=weight_dtype), reduction="none", loss_type=args.loss_type, huber_c=huber_c )
+                        else:
+                            loss = train_util.conditional_loss( noise_pred.float(), target.float(), reduction="none", loss_type=args.loss_type, huber_c=huber_c )
+                        if args.masked_loss or ("alpha_masks" in batch and batch["alpha_masks"] is not None):
+                            loss = apply_masked_loss(loss, batch, args)
+                        loss = loss.mean([1, 2, 3])
+                        loss_weights = batch["loss_weights"]  # 各sampleごとのweight
+                        loss = loss * loss_weights
+                        if args.min_snr_gamma:
+                            loss = apply_snr_weight(loss, timesteps, noise_scheduler, args.min_snr_gamma, args.v_parameterization)
+                        if args.scale_v_pred_loss_like_noise_pred:
+                            loss = scale_v_prediction_loss_like_noise_prediction(loss, timesteps, noise_scheduler)
+                        if args.v_pred_like_loss:
+                            loss = add_v_prediction_like_loss(loss, timesteps, noise_scheduler, args.v_pred_like_loss)
+                        if args.debiased_estimation_loss:
+                            loss = apply_debiased_estimation(loss, timesteps, noise_scheduler)
+                        loss = loss.mean()  # 平均なのでbatch_sizeで割る必要なし
+                        if calculateRegCaptionLoss:
+                            print("Applying reg caption loss")
+                            extra_loss = torch.nn.functional.mse_loss(reg_noise_pred.float(), target.float(),reduction="none")
+                            if(args.masked_two_caption_loss):
+                                extra_loss = apply_masked_loss(extra_loss, batch, args, 1, -1)
+                            extra_loss = extra_loss.mean([1, 2, 3])
+                            extra_loss = extra_loss * loss_weights
+                            extra_loss = extra_loss.mean()
+                            loss = (loss + extra_loss).mean()
+                        # Calculate UnetSamplingRegLoss
+                        if bonusParam.unetSampling:
+                            print("unetsampling")
+                            unet_reg_loss = torch.nn.functional.mse_loss(noise_pred.float(), unet_reg_noise_pred.float() ,reduction="none")
+                            unet_reg_loss = unet_reg_loss.mean([1, 2, 3])
+                            unet_reg_loss = unet_reg_loss * loss_weights
+                            unet_reg_loss = unet_reg_loss.mean()
+                            loss = (loss + unet_reg_loss * bonusParam.unetSamplingMultiplier)
+                        accelerator.backward(loss)
                         if accelerator.sync_gradients:
-                            progress_bar.update(1)
-                            global_step += 1
-
-                            self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
-
-                            # 指定ステップごとにモデルを保存
-                            if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
-                                accelerator.wait_for_everyone()
-                                if accelerator.is_main_process:
-                                    ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
-                                    save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch)
-
-                                    if args.save_state:
-                                        train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
-
-                                    remove_step_no = train_util.get_remove_step_no(args, global_step)
-                                    if remove_step_no is not None:
-                                        remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, remove_step_no)
-                                        remove_model(remove_ckpt_name)
-
-                        current_loss = loss.detach().item()
-                        loss_recorder.add(epoch=epoch, step=step, loss=current_loss)
-                        avr_loss: float = loss_recorder.moving_average
-                        logs = {"avr_loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
-
-                        progress_bar.set_postfix(**logs)
-
-                        #if bonusParam.unetSampling:
-                        #    unet_loss_recorder.add(epoch=epoch, step=global_step, loss=unet_reg_loss.detach().item())
-
-                        if args.scale_weight_norms:
-                            progress_bar.set_postfix(**{**max_mean_logs, **logs})
-
-                        if args.logging_dir is not None:
-                            logs = self.generate_step_logs(
-                                args, current_loss, avr_loss, lr_scheduler, lr_descriptions, keys_scaled, mean_norm,
-                                maximum_norm
-                            )
-                            accelerator.log(logs, step=global_step)
-
-
-
-                        if global_step >= args.max_train_steps:
-                            break
+                            self.all_reduce_network(accelerator, network)  # sync DDP grad manually
+                            if args.max_grad_norm != 0.0:
+                                params_to_clip = accelerator.unwrap_model(network).get_trainable_params()
+                                accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
+                        optimizer.step()
+                        lr_scheduler.step()
+                        optimizer.zero_grad(set_to_none=True)
+###################    ########################
+                    if args.scale_weight_norms:
+                        keys_scaled, mean_norm, maximum_norm = accelerator.unwrap_model(network).apply_max_norm_regularization(
+                            args.scale_weight_norms, accelerator.device
+                        )
+                        max_mean_logs = {"Keys Scaled": keys_scaled, "Average key norm": mean_norm}
+                    else:
+                        keys_scaled, mean_norm, maximum_norm = None, None, None
+                    # Checks if the accelerator has performed an optimization step behind the scenes
+                    if accelerator.sync_gradients:
+                        progress_bar.update(1)
+                        global_step += 1
+                        self.sample_images(accelerator, args, None, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
+                        # 指定ステップごとにモデルを保存
+                        if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
+                            accelerator.wait_for_everyone()
+                            if accelerator.is_main_process:
+                                ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
+                                save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch)
+                                if args.save_state:
+                                    train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
+                                remove_step_no = train_util.get_remove_step_no(args, global_step)
+                                if remove_step_no is not None:
+                                    remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, remove_step_no)
+                                    remove_model(remove_ckpt_name)
+                    current_loss = loss.detach().item()
+                    loss_recorder.add(epoch=epoch, step=step, loss=current_loss)
+                    avr_loss: float = loss_recorder.moving_average
+                    logs = {"avr_loss": avr_loss}  # , "lr": lr_scheduler.get_last_lr()[0]}
+                    progress_bar.set_postfix(**logs)
+                    #if bonusParam.unetSampling:
+                    #    unet_loss_recorder.add(epoch=epoch, step=global_step, loss=unet_reg_loss.detach().item())
+                    if args.scale_weight_norms:
+                        progress_bar.set_postfix(**{**max_mean_logs, **logs})
+                    if args.logging_dir is not None:
+                        logs = self.generate_step_logs(
+                            args, current_loss, avr_loss, lr_scheduler, lr_descriptions, keys_scaled, mean_norm,
+                            maximum_norm
+                        )
+                        accelerator.log(logs, step=global_step)
+                    if global_step >= args.max_train_steps:
+                        break
 
             if args.logging_dir is not None:
                 logs = {"loss/epoch": loss_recorder.moving_average}
