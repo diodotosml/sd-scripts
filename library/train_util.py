@@ -451,26 +451,6 @@ class AugHelper:
 
 class BaseSubset:
     def __init__(
-            self,
-            image_dir: Optional[str],
-            num_repeats: int,
-            shuffle_caption: bool,
-            caption_separator: str,
-            keep_tokens: int,
-            keep_tokens_separator: str,
-            secondary_separator: Optional[str],
-            enable_wildcard: bool,
-            color_aug: bool,
-            flip_aug: bool,
-            face_crop_aug_range: Optional[Tuple[float, float]],
-            random_crop: bool,
-            caption_dropout_rate: float,
-            caption_dropout_every_n_epochs: int,
-            caption_tag_dropout_rate: float,
-            caption_prefix: Optional[str],
-            caption_suffix: Optional[str],
-            token_warmup_min: int,
-            token_warmup_step: Union[float, int],
         self,
         image_dir: Optional[str],
         alpha_mask: Optional[bool],
@@ -491,7 +471,7 @@ class BaseSubset:
         caption_prefix: Optional[str],
         caption_suffix: Optional[str],
         token_warmup_min: int,
-        token_warmup_step: Union[float, int],
+        token_warmup_step: Union[float, int]
     ) -> None:
         self.image_dir = image_dir
         self.alpha_mask = alpha_mask if alpha_mask is not None else False
