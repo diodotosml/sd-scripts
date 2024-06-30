@@ -5763,4 +5763,6 @@ class LossRecorder:
 
     @property
     def moving_average(self) -> float:
+        if  len(self.loss_list) == 0:
+            return self.loss_total
         return self.loss_total / len(self.loss_list)
