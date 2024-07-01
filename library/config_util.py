@@ -87,6 +87,8 @@ class DreamBoothSubsetParams(BaseSubsetParams):
     caption_extension: str = ".caption"
     cache_info: bool = False
     alpha_mask: bool = False
+    min_timestep: int = 0
+    max_timestep: int = 1000
 
 
 @dataclass
@@ -216,6 +218,8 @@ class ConfigSanitizer:
         Required("image_dir"): str,
         "is_reg": bool,
         "alpha_mask": bool,
+        "min_timestep": int,
+        "max_timestep": int,
     }
     # FT means FineTuning
     FT_SUBSET_DISTINCT_SCHEMA = {

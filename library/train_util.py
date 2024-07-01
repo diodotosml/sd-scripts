@@ -192,6 +192,8 @@ class ImageInfo:
         self.scanCaptionForExtradataParameter()
         self.scanCaptionForRegCaptionParameter()
         self.scanCaptionForUnusedParameters()
+        self.min_timestep = 0
+        self.max_timestep = 1000
 
     def scanCaptionForScaleParameter(self):
         scaleRegularExpression = re.compile("--scale\\(\\s*([+-]?\\s*\\d+(?:\\.\\d+)?)\\s*\\)")
@@ -500,31 +502,33 @@ class BaseSubset:
 
 class DreamBoothSubset(BaseSubset):
     def __init__(
-        self,
-        image_dir: str,
-        is_reg: bool,
-        class_tokens: Optional[str],
-        caption_extension: str,
-        cache_info: bool,
-        alpha_mask: bool,
-        num_repeats,
-        shuffle_caption,
-        caption_separator: str,
-        keep_tokens,
-        keep_tokens_separator,
-        secondary_separator,
-        enable_wildcard,
-        color_aug,
-        flip_aug,
-        face_crop_aug_range,
-        random_crop,
-        caption_dropout_rate,
-        caption_dropout_every_n_epochs,
-        caption_tag_dropout_rate,
-        caption_prefix,
-        caption_suffix,
-        token_warmup_min,
-        token_warmup_step
+            self,
+            image_dir: str,
+            is_reg: bool,
+            class_tokens: Optional[str],
+            caption_extension: str,
+            cache_info: bool,
+            alpha_mask: bool,
+            num_repeats,
+            shuffle_caption,
+            caption_separator: str,
+            keep_tokens,
+            keep_tokens_separator,
+            secondary_separator,
+            enable_wildcard,
+            color_aug,
+            flip_aug,
+            face_crop_aug_range,
+            random_crop,
+            caption_dropout_rate,
+            caption_dropout_every_n_epochs,
+            caption_tag_dropout_rate,
+            caption_prefix,
+            caption_suffix,
+            token_warmup_min,
+            token_warmup_step,
+            min_timestep,
+            max_timestep,
     ) -> None:
         assert image_dir is not None, "image_dir must be specified / image_dirは指定が必須です"
 
@@ -554,6 +558,8 @@ class DreamBoothSubset(BaseSubset):
         self.is_reg = is_reg
         self.class_tokens = class_tokens
         self.caption_extension = caption_extension
+        self.min_timestep = min_timestep
+        self.max_timestep = max_timestep
 
         if self.caption_extension and not self.caption_extension.startswith("."):
             self.caption_extension = "." + self.caption_extension
@@ -1292,6 +1298,8 @@ class BaseDataset(torch.utils.data.Dataset):
         grouping = []
         extra = []
         bonus_params = []
+        min_timestep = []
+        max_timestep = []
 
         for image_key in bucket[image_index: image_index + bucket_batch_size]:
             image_info = self.image_data[image_key]
@@ -1301,6 +1309,9 @@ class BaseDataset(torch.utils.data.Dataset):
             extra.append(image_info.extra)
             captions_reg.append(image_info.caption_reg)
             bonus_params.append(image_info.bonus_params)
+            min_timestep.append(image_info.min_timestep)
+            max_timestep.append(image_info.max_timestep)
+
             subset = self.image_to_subset[image_key]
             loss_weights.append(
                 self.prior_loss_weight if image_info.is_reg else 1.0
@@ -1413,6 +1424,9 @@ class BaseDataset(torch.utils.data.Dataset):
             caption = image_info.caption  # default
             caption_reg = image_info.caption_reg  # default
             bonus_params = image_info.bonus_params
+            min_timestep = image_info.min_timestep
+            max_timestep = image_info.max_timestep
+
             if image_info.text_encoder_outputs1 is not None:
                 text_encoder_outputs1_list.append(image_info.text_encoder_outputs1)
                 text_encoder_outputs2_list.append(image_info.text_encoder_outputs2)
@@ -1522,6 +1536,8 @@ class BaseDataset(torch.utils.data.Dataset):
         example["extra"] = extra
         example["captions_reg"] = captions_reg
         example["bonus_params"] = bonus_params
+        example["min_timestep"] = min_timestep
+        example["max_timestep"] = max_timestep
         if self.debug_dataset:
             example["image_keys"] = bucket[image_index: image_index + self.batch_size]
         return example
@@ -1542,10 +1558,15 @@ class BaseDataset(torch.utils.data.Dataset):
         extra = []
         captions_reg = []
         bonus_params = []
+        min_timestep = []
+        max_timestep = []
 
         for image_key in bucket[image_index: image_index + bucket_batch_size]:
             image_info = self.image_data[image_key]
             subset = self.image_to_subset[image_key]
+
+            min_timestep.append(subset.min_timestep)
+            max_timestep.append(subset.max_timestep)
 
             if flip_aug is None:
                 flip_aug = subset.flip_aug
@@ -1605,6 +1626,8 @@ class BaseDataset(torch.utils.data.Dataset):
         example["extra"] = image_info.extra
         example["captions_reg"] = image_info.caption_reg
         example["bonus_params"] = image_info.bonus_params
+        example["min_timestep"] = min_timestep
+        example["max_timestep"] = max_timestep
         return example
 
 
@@ -1612,20 +1635,20 @@ class DreamBoothDataset(BaseDataset):
     IMAGE_INFO_CACHE_FILE = "metadata_cache.json"
 
     def __init__(
-        self,
-        subsets: Sequence[DreamBoothSubset],
-        batch_size: int,
-        tokenizer,
-        max_token_length,
-        resolution,
-        network_multiplier: float,
-        enable_bucket: bool,
-        min_bucket_reso: int,
-        max_bucket_reso: int,
-        bucket_reso_steps: int,
-        bucket_no_upscale: bool,
-        prior_loss_weight: float,
-        debug_dataset: bool,
+            self,
+            subsets: Sequence[DreamBoothSubset],
+            batch_size: int,
+            tokenizer,
+            max_token_length,
+            resolution,
+            network_multiplier: float,
+            enable_bucket: bool,
+            min_bucket_reso: int,
+            max_bucket_reso: int,
+            bucket_reso_steps: int,
+            bucket_no_upscale: bool,
+            prior_loss_weight: float,
+            debug_dataset: bool
     ) -> None:
         super().__init__(tokenizer, max_token_length, resolution, network_multiplier, debug_dataset)
 
@@ -5247,8 +5270,9 @@ def get_timesteps_and_huber_c(args, min_timestep, max_timestep, noise_scheduler,
     return timesteps, huber_c
 
 
-def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents):
+def get_noise_noisy_latents_and_timesteps_with_timestep_input(args, noise_scheduler, latents, min_timestep:int, max_timestep:int):
     # Sample noise that we'll add to the latents
+
     noise = torch.randn_like(latents, device=latents.device)
     if args.noise_offset:
         if args.noise_offset_random_strength:
@@ -5263,6 +5287,45 @@ def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents):
 
     # Sample a random timestep for each image
     b_size = latents.shape[0]
+
+    min_timestep = min_timestep
+    # max_timestep = noise_scheduler.config.num_train_timesteps if args.max_timestep is None else args.max_timestep
+    max_timestep = max_timestep
+
+    timesteps, huber_c = get_timesteps_and_huber_c(args, min_timestep, max_timestep, noise_scheduler, b_size,
+                                                   latents.device)
+
+    # Add noise to the latents according to the noise magnitude at each timestep
+    # (this is the forward diffusion process)
+    if args.ip_noise_gamma:
+        if args.ip_noise_gamma_random_strength:
+            strength = torch.rand(1, device=latents.device) * args.ip_noise_gamma
+        else:
+            strength = args.ip_noise_gamma
+        noisy_latents = noise_scheduler.add_noise(latents, noise + strength * torch.randn_like(latents), timesteps)
+    else:
+        noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
+
+    return noise, noisy_latents, timesteps, huber_c
+
+def get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents):
+    # Sample noise that we'll add to the latents
+
+    noise = torch.randn_like(latents, device=latents.device)
+    if args.noise_offset:
+        if args.noise_offset_random_strength:
+            noise_offset = torch.rand(1, device=latents.device) * args.noise_offset
+        else:
+            noise_offset = args.noise_offset
+        noise = custom_train_functions.apply_noise_offset(latents, noise, noise_offset, args.adaptive_noise_scale)
+    if args.multires_noise_iterations:
+        noise = custom_train_functions.pyramid_noise_like(
+            noise, latents.device, args.multires_noise_iterations, args.multires_noise_discount
+        )
+
+    # Sample a random timestep for each image
+    b_size = latents.shape[0]
+
     min_timestep = 0 if args.min_timestep is None else args.min_timestep
     max_timestep = noise_scheduler.config.num_train_timesteps if args.max_timestep is None else args.max_timestep
 

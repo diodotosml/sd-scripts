@@ -1029,8 +1029,12 @@ class NetworkTrainer:
                                     caption_ids["antiGreenMaskCaption"] = self.generate_caption_ids(tokenizers, bonusParam.antiGreenMaskCaption, text_encoders, accelerator, args, weight_dtype)
                         # Sample noise, sample a random timestep for each image, and add noise to the latents,
                         # with noise offset and/or multires noise if specified
-                        noise, noisy_latents, timesteps,huber_c = train_util.get_noise_noisy_latents_and_timesteps(
-                            args, noise_scheduler, latents
+
+                        min_timestep = batch["min_timestep"] if args.min_timestep is None else args.min_timestep
+                        max_timestep = batch["max_timestep"] if args.max_timestep is None else args.max_timestep
+
+                        noise, noisy_latents, timesteps,huber_c = train_util.get_noise_noisy_latents_and_timesteps_with_timestep_input(
+                            args, noise_scheduler, latents, min_timestep, max_timestep
                         )
                        #if args.reg_image_training:
                        #    reg_noise, reg_noisy_latents, _, _, _ = train_util.get_noise_noisy_latents_and_timesteps(
