@@ -1030,9 +1030,10 @@ class NetworkTrainer:
                         # Sample noise, sample a random timestep for each image, and add noise to the latents,
                         # with noise offset and/or multires noise if specified
 
+
                         min_timestep = batch["min_timestep"] if args.min_timestep is None else args.min_timestep
                         max_timestep = batch["max_timestep"] if args.max_timestep is None else args.max_timestep
-
+                        breakpoint()
                         print(args.batch["min_timestep"])
                         print(args.batch["max_timestep"])
                         print(args.min_timestep)
