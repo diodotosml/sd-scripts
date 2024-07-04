@@ -160,7 +160,7 @@ class BonusParams:
 
 
 class ImageInfo:
-    def __init__(self, image_key: str, num_repeats: int, caption: str, is_reg: bool, absolute_path: str) -> None:
+    def __init__(self, image_key: str, num_repeats: int, caption: str, is_reg: bool, absolute_path: str, min_timestep:int = 0, max_timestep:int = 0) -> None:
         self.image_key: str = image_key
         self.num_repeats: int = num_repeats
         self.caption: str = caption
@@ -192,8 +192,8 @@ class ImageInfo:
         self.scanCaptionForExtradataParameter()
         self.scanCaptionForRegCaptionParameter()
         self.scanCaptionForUnusedParameters()
-        self.min_timestep = 0
-        self.max_timestep = 1000
+        self.min_timestep = min_timestep
+        self.max_timestep = max_timestep
 
     def scanCaptionForScaleParameter(self):
         scaleRegularExpression = re.compile("--scale\\(\\s*([+-]?\\s*\\d+(?:\\.\\d+)?)\\s*\\)")

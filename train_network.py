@@ -1034,8 +1034,8 @@ class NetworkTrainer:
                         min_timestep = batch["min_timestep"] if args.min_timestep is None else args.min_timestep
                         max_timestep = batch["max_timestep"] if args.max_timestep is None else args.max_timestep
                         breakpoint()
-                        print(args.batch["min_timestep"])
-                        print(args.batch["max_timestep"])
+                        print(batch["min_timestep"])
+                        print(batch["max_timestep"])
                         print(args.min_timestep)
                         print(args.max_timestep)
                         print(min_timestep)
