@@ -1033,13 +1033,6 @@ class NetworkTrainer:
 
                         min_timestep = batch["min_timestep"] if args.min_timestep is None else args.min_timestep
                         max_timestep = batch["max_timestep"] if args.max_timestep is None else args.max_timestep
-                        breakpoint()
-                        print(batch["min_timestep"])
-                        print(batch["max_timestep"])
-                        print(args.min_timestep)
-                        print(args.max_timestep)
-                        print(min_timestep)
-                        print(max_timestep)
 
                         noise, noisy_latents, timesteps,huber_c = train_util.get_noise_noisy_latents_and_timesteps_with_timestep_input(
                             args, noise_scheduler, latents, min_timestep, max_timestep
