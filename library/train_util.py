@@ -160,7 +160,7 @@ class BonusParams:
 
 
 class ImageInfo:
-    def __init__(self, image_key: str, num_repeats: int, caption: str, is_reg: bool, absolute_path: str, min_timestep:int = 0, max_timestep:int = 0) -> None:
+    def __init__(self, image_key: str, num_repeats: int, caption: str, is_reg: bool, absolute_path: str, min_timestep:int = 0, max_timestep:int = 1000) -> None:
         self.image_key: str = image_key
         self.num_repeats: int = num_repeats
         self.caption: str = caption
@@ -1790,6 +1790,8 @@ class DreamBoothDataset(BaseDataset):
         num_train_images = 0
         num_reg_images = 0
         reg_infos: List[Tuple[ImageInfo, DreamBoothSubset]] = []
+        min_timestep = []
+        max_timestep = []
         for subset in subsets:
             if subset.num_repeats < 1:
                 logger.warning(
@@ -1816,14 +1818,15 @@ class DreamBoothDataset(BaseDataset):
                 num_train_images += subset.num_repeats * len(img_paths)
 
             for img_path, caption, size in zip(img_paths, captions, sizes):
-                info = ImageInfo(img_path, subset.num_repeats, caption, subset.is_reg, img_path)
+                info = ImageInfo(img_path, subset.num_repeats, caption, subset.is_reg, img_path, subset.min_timestep, subset.max_timestep)
                 if size is not None:
                     info.image_size = size
                 if subset.is_reg:
                     reg_infos.append((info, subset))
                 else:
                     self.register_image(info, subset)
-
+            min_timestep.append(subset.min_timestep)
+            max_timestep.append(subset.max_timestep)
             subset.img_count = len(img_paths)
             self.subsets.append(subset)
 
