@@ -1799,11 +1799,6 @@ class DreamBoothDataset(BaseDataset):
                 )
                 continue
 
-            if subset in self.subsets:
-                logger.warning(
-                    f"ignore duplicated subset with image_dir='{subset.image_dir}': use the first one / 既にサブセットが登録されているため、重複した後発のサブセットを無視します"
-                )
-                continue
 
             img_paths, captions, sizes = load_dreambooth_dir(subset)
             if len(img_paths) < 1:
@@ -5662,6 +5657,16 @@ def sample_images_common(
     vae.to(org_vae_device)
 
 
+def setseedtorch(seed):
+    if seed is not None:
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+    else:
+        # True random sample image generation
+        torch.seed()
+        torch.cuda.seed()
+
+
 def sample_image_inference(
         accelerator: Accelerator,
         args: argparse.Namespace,
@@ -5689,13 +5694,7 @@ def sample_image_inference(
         if negative_prompt is not None:
             negative_prompt = negative_prompt.replace(prompt_replacement[0], prompt_replacement[1])
 
-    if seed is not None:
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed(seed)
-    else:
-        # True random sample image generation
-        torch.seed()
-        torch.cuda.seed()
+    setseedtorch(seed)
 
     scheduler = get_my_scheduler(
         sample_sampler=sampler_name,

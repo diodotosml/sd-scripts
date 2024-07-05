@@ -911,6 +911,8 @@ class NetworkTrainer:
                 accelerator.print(f"removing old checkpoint: {old_ckpt_file}")
                 os.remove(old_ckpt_file)
 
+        train_util.setseedtorch(args.seed)
+
         # For --sample_at_first
         self.sample_images(accelerator, args, 0, global_step, accelerator.device, vae, tokenizer, text_encoder, unet)
         caption_ids = {}
@@ -934,20 +936,6 @@ class NetworkTrainer:
             if initial_step > 0:
                 skipped_dataloader = accelerator.skip_first_batches(train_dataloader, initial_step - 1)
                 initial_step = 1
-
-            for step, batch in enumerate(skipped_dataloader or train_dataloader):
-                current_step.value = global_step
-                if initial_step > 0:
-                    initial_step -= 1
-                    continue
-
-                with accelerator.accumulate(training_model):
-                    on_step_start(text_encoder, unet)
-
-            #image_groups = group_by_element(enumerate(train_dataloader), key_func=lambda  x: x[1]["grouping"])
-
-
-            listOfBatches = []
 
             for step, batch in enumerate(skipped_dataloader or train_dataloader):
                 current_step.value = global_step
