@@ -5657,6 +5657,82 @@ def sample_images_common(
     vae.to(org_vae_device)
 
 
+def sample_noise_common(
+    accelerator: Accelerator,
+    args: argparse.Namespace,
+    vae,
+    tokenizer,
+    text_encoder,
+    unet,
+    noise,
+):
+
+    distributed_state = PartialState()  # for multi gpu distributed inference. this is a singleton, so it's safe to use it here
+
+    org_vae_device = vae.device  # CPUにいるはず
+    vae.to(distributed_state.device)  # distributed_state.device is same as accelerator.device
+
+    # unwrap unet and text_encoder(s)
+    unet = accelerator.unwrap_model(unet)
+    if isinstance(text_encoder, (list, tuple)):
+        text_encoder = [accelerator.unwrap_model(te) for te in text_encoder]
+    else:
+        text_encoder = accelerator.unwrap_model(text_encoder)
+
+    # schedulers: dict = {}  cannot find where this is used
+    default_scheduler = get_my_scheduler(
+        sample_sampler=args.sample_sampler,
+        v_parameterization=args.v_parameterization,
+        x0_prediction=args.x0_prediction,
+        direct_noise_prediction=args.direct_noise_prediction
+    )
+
+    pipeline = StableDiffusionLongPromptWeightingPipeline(
+        text_encoder=text_encoder,
+        vae=vae,
+        unet=unet,
+        tokenizer=tokenizer,
+        scheduler=default_scheduler,
+        safety_checker=None,
+        feature_extractor=None,
+        requires_safety_checker=False,
+        clip_skip=args.clip_skip,
+    )
+    pipeline.to(distributed_state.device)
+    save_dir = args.output_dir + "/sample"
+    os.makedirs(save_dir, exist_ok=True)
+
+    # save random state to restore later
+    rng_state = torch.get_rng_state()
+    cuda_rng_state = None
+    try:
+        cuda_rng_state = torch.cuda.get_rng_state() if torch.cuda.is_available() else None
+    except Exception:
+        pass
+
+    if 1 == 1:
+        with torch.no_grad():
+            with torch.cuda.device(torch.cuda.current_device()):
+                torch.cuda.empty_cache()
+            image = pipeline.latents_to_image(noise)[0]
+            ts_str = time.strftime("%Y%m%d%H%M%S", time.localtime())
+
+            img_filename = f"{'' if args.output_name is None else args.output_name + '_'}_{ts_str}.png"
+        image.save(os.path.join(save_dir, img_filename))
+
+    # clear pipeline and cache to reduce vram usage
+    del pipeline
+
+    # I'm not sure which of these is the correct way to clear the memory, but accelerator's device is used in the pipeline, so I'm using it here.
+    # with torch.cuda.device(torch.cuda.current_device()):
+    #     torch.cuda.empty_cache()
+    clean_memory_on_device(accelerator.device)
+
+    torch.set_rng_state(rng_state)
+    if cuda_rng_state is not None:
+        torch.cuda.set_rng_state(cuda_rng_state)
+    vae.to(org_vae_device)
+
 def setseedtorch(seed):
     if seed is not None:
         torch.manual_seed(seed)

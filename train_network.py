@@ -14,6 +14,7 @@ import toml
 from tqdm import tqdm
 
 import torch
+
 from library.device_utils import init_ipex, clean_memory_on_device
 
 init_ipex()
@@ -1025,7 +1026,10 @@ class NetworkTrainer:
                         noise, noisy_latents, timesteps,huber_c = train_util.get_noise_noisy_latents_and_timesteps_with_timestep_input(
                             args, noise_scheduler, latents, min_timestep, max_timestep
                         )
-                       #if args.reg_image_training:
+
+                        #train_util.sample_noise_common(accelerator, args, vae, tokenizer, text_encoder, unet, noise)
+
+                        #if args.reg_image_training:
                        #    reg_noise, reg_noisy_latents, _, _, _ = train_util.get_noise_noisy_latents_and_timesteps(
                        #        args, noise_scheduler, latents, timesteps, noise, noise_offset
                        #    )
